@@ -154,6 +154,7 @@ class _BotDetailPageState extends State<BotDetailPage>
                         controller: _tabController,
                         children: [
                           _buildKnowledgeTab(),
+                          _buildPreviewTab(),
                         ],
                       ),
                     ),
@@ -375,5 +376,160 @@ class _BotDetailPageState extends State<BotDetailPage>
     );
   }
 
-  
+  Widget _buildPreviewTab() {
+    return ListView(
+      padding: const EdgeInsets.all(16),
+      children: [
+        
+        Row(
+          children: [
+            Icon(Icons.chat_bubble_outline, size: 20, color: AppTheme.darkBlue),
+            const SizedBox(width: 8),
+            const Text(
+              AppConstants.previewTitle,
+              style: TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.w600,
+                color: AppTheme.darkBlue,
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 8),
+        Text(
+          AppConstants.previewDesc,
+          style: TextStyle(fontSize: 13, color: Colors.grey[600]),
+        ),
+
+        const SizedBox(height: 32),
+
+        
+        Container(
+          padding: const EdgeInsets.all(24),
+          decoration: BoxDecoration(
+            color: Colors.grey[50],
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: Colors.grey[200]!),
+          ),
+          child: Column(
+            children: [
+              Icon(Icons.smart_toy, size: 64, color: AppTheme.primaryBlue.withOpacity(0.3)),
+              const SizedBox(height: 16),
+              const Text(
+                AppConstants.testYourBot,
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.w600,
+                  color: AppTheme.darkBlue,
+                ),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                AppConstants.testYourBotDesc,
+                textAlign: TextAlign.center,
+                style: TextStyle(fontSize: 14, color: Colors.grey[600]),
+              ),
+              const SizedBox(height: 24),
+              _buildSamplePrompt(
+                '"What topics do you have expertise in?"',
+              ),
+              const SizedBox(height: 12),
+              _buildSamplePrompt(
+                '"What are the key insights from your knowledge base?"',
+              ),
+              const SizedBox(height: 12),
+              _buildSamplePrompt(
+                '"How current is your knowledge?"',
+              ),
+            ],
+          ),
+        ),
+
+        const SizedBox(height: 24),
+
+        
+        Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              decoration: BoxDecoration(
+                color: Colors.grey[100],
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Row(
+                children: [
+                  Icon(Icons.psychology, size: 18, color: Colors.grey[700]),
+                  const SizedBox(width: 6),
+                  Text(
+                    _bot!.model.displayName,
+                    style: TextStyle(fontSize: 13, color: Colors.grey[700]),
+                  ),
+                ],
+              ),
+            ),
+            const Spacer(),
+            ElevatedButton(
+              onPressed: () {
+                Navigator.pushNamed(
+                  context,
+                  AppConstants.botPreviewRoute,
+                  arguments: widget.botId,
+                );
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppTheme.primaryBlue.withOpacity(0.1),
+                foregroundColor: AppTheme.primaryBlue,
+                elevation: 0,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(10),
+                ),
+              ),
+              child: const Text(AppConstants.newThread),
+            ),
+          ],
+        ),
+
+        const SizedBox(height: 16),
+
+        
+        Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: Colors.grey[50],
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: Colors.grey[200]!),
+          ),
+          child: Row(
+            children: [
+              Icon(Icons.code, size: 20, color: Colors.grey[400]),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Text(
+                  AppConstants.askMeAnything,
+                  style: TextStyle(fontSize: 14, color: Colors.grey[400]),
+                ),
+              ),
+              Icon(Icons.send, size: 20, color: Colors.grey[400]),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildSamplePrompt(String text) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: Colors.grey[200]!),
+      ),
+      child: Text(
+        text,
+        style: const TextStyle(fontSize: 14, color: AppTheme.darkBlue),
+      ),
+    );
+  }
 }
