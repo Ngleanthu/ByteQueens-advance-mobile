@@ -155,6 +155,7 @@ class _BotDetailPageState extends State<BotDetailPage>
                         children: [
                           _buildKnowledgeTab(),
                           _buildPreviewTab(),
+                          _buildSettingsTab(),
                         ],
                       ),
                     ),
@@ -530,6 +531,117 @@ class _BotDetailPageState extends State<BotDetailPage>
         text,
         style: const TextStyle(fontSize: 14, color: AppTheme.darkBlue),
       ),
+    );
+  }
+
+  Widget _buildSettingsTab() {
+    return ListView(
+      padding: const EdgeInsets.all(16),
+      children: [
+        
+        Row(
+          children: [
+            Icon(Icons.settings, size: 20, color: AppTheme.darkBlue),
+            const SizedBox(width: 8),
+            const Text(
+              AppConstants.settingsTitle,
+              style: TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.w600,
+                color: AppTheme.darkBlue,
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 8),
+        Text(
+          AppConstants.settingsDesc,
+          style: TextStyle(fontSize: 13, color: Colors.grey[600]),
+        ),
+
+        const SizedBox(height: 24),
+
+        
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Text(
+              '${AppConstants.instructions} (${_bot!.instructions?.length ?? 0} chars)',
+              style: const TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+            ElevatedButton(
+              onPressed: () {},
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppTheme.primaryBlue,
+                foregroundColor: Colors.white,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+              ),
+              child: const Text(AppConstants.save),
+            ),
+          ],
+        ),
+
+        const SizedBox(height: 12),
+
+        Container(
+          height: 200,
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: Colors.grey[50],
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: Colors.grey[200]!),
+          ),
+          child: TextField(
+            controller: TextEditingController(text: _bot!.instructions),
+            maxLines: null,
+            decoration: const InputDecoration(
+              border: InputBorder.none,
+              hintText: 'Enter bot instructions...',
+            ),
+          ),
+        ),
+
+        const SizedBox(height: 16),
+
+        
+        Container(
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            color: AppTheme.primaryBlue.withOpacity(0.1),
+            borderRadius: BorderRadius.circular(10),
+            border: Border.all(color: AppTheme.primaryBlue.withOpacity(0.2)),
+          ),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                '${AppConstants.settingsTip.split(':')[0]}:',
+                style: const TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                  color: AppTheme.primaryBlue,
+                ),
+              ),
+              const SizedBox(width: 4),
+              Expanded(
+                child: Text(
+                  AppConstants.settingsTip.split(': ')[1],
+                  style: TextStyle(
+                    fontSize: 13,
+                    color: AppTheme.darkBlue.withOpacity(0.8),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
     );
   }
 }
