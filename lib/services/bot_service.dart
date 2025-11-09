@@ -78,5 +78,32 @@ class BotService {
 
     return sorted;
   }
+  Future<Bot> createBot({
+    required String name,
+    String? description,
+    String? instructions,
+    required AIModel model,
+    List<KnowledgeSource>? knowledgeSources,
+  }) async {
+    await Future.delayed(const Duration(seconds: 1));
+
+    final bot = Bot(
+      id: DateTime.now().millisecondsSinceEpoch.toString(),
+      name: name,
+      description: description,
+      instructions: instructions,
+      model: model,
+      knowledgeSources: knowledgeSources ?? [],
+      createdAt: DateTime.now(),
+      updatedAt: DateTime.now(),
+      ownerId: _currentUserId,
+      ownerName: _currentUserName,
+      ownerEmail: _currentUserEmail,
+    );
+
+    _bots.add(bot);
+    return bot;
+  }
+
 
 }
