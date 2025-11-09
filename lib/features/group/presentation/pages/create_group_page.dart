@@ -6,7 +6,7 @@ import 'package:bytequeens_adm/services/auth_service.dart';
 import 'package:bytequeens_adm/data/models/user.dart';
 
 class CreateGroupPage extends StatefulWidget {
-  const CreateGroupPage({Key? key}) : super(key: key);
+  const CreateGroupPage({super.key});
 
   @override
   State<CreateGroupPage> createState() => _CreateGroupPageState();
@@ -248,7 +248,7 @@ _selectedMembers.map((member) {
                   margin: const EdgeInsets.only(bottom: 8),
                   child: ListTile(
                     leading: CircleAvatar(
-                      backgroundColor: AppTheme.primaryBlue.withOpacity(0.1),
+                      backgroundColor: AppTheme.primaryBlue.withValues(alpha: 0.1),
                       child: Text(
                         member.initials,
                         style: const TextStyle(
@@ -393,7 +393,7 @@ _selectedMembers.map((member) {
                           Navigator.pop(context);
                         },
                         secondary: CircleAvatar(
-                          backgroundColor: AppTheme.primaryBlue.withOpacity(0.1),
+                          backgroundColor: AppTheme.primaryBlue.withValues(alpha: 0.1),
                           child: Text(
                             user.initials,
                             style: const TextStyle(

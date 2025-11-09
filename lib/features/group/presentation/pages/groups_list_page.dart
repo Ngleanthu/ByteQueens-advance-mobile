@@ -5,7 +5,7 @@ import 'package:bytequeens_adm/services/group_service.dart';
 import 'package:bytequeens_adm/data/models/group.dart';
 
 class GroupsListPage extends StatefulWidget {
-  const GroupsListPage({Key? key}) : super(key: key);
+  const GroupsListPage({super.key});
 
   @override
   State<GroupsListPage> createState() => _GroupsListPageState();
@@ -223,7 +223,7 @@ class _GroupsListPageState extends State<GroupsListPage> {
                   
                   CircleAvatar(
                     radius: 28,
-                    backgroundColor: AppTheme.primaryBlue.withOpacity(0.1),
+                    backgroundColor: AppTheme.primaryBlue.withValues(alpha: 0.1),
                     child: Text(
                       group.name[0].toUpperCase(),
                       style: const TextStyle(
@@ -336,7 +336,7 @@ class _GroupsListPageState extends State<GroupsListPage> {
             child: CircleAvatar(
               radius: 14,
               backgroundColor: Colors.primaries[index % Colors.primaries.length]
-                  .withOpacity(0.2),
+                  .withValues(alpha: 0.2),
               child: Text(
                 member.name[0].toUpperCase(),
                 style: TextStyle(
