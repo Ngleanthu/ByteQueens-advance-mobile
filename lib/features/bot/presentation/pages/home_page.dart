@@ -46,7 +46,14 @@ class _HomePageState extends State<HomePage> {
                   Navigator.pop(context);
                 },
               ),
-              
+              ListTile(
+                leading: const Icon(Icons.logout, color: Colors.white),
+                title: const Text(AppConstants.logout, style: TextStyle(color: Colors.white)),
+                onTap: () {
+                  Navigator.pop(context);
+                  _showLogoutConfirmation();
+                },
+              ),
             ],
           ),
         ),
@@ -54,6 +61,35 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
+  void _showLogoutConfirmation() {
+    showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: const Text(AppConstants.logout),
+          content: const Text(AppConstants.logoutConfirm),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text(AppConstants.cancel),
+            ),
+            TextButton(
+              onPressed: () {
+                Navigator.pop(context);
+                Navigator.pushNamedAndRemoveUntil(
+                  context,
+                  AppConstants.signInRoute,
+                  (route) => false,
+                );
+              },
+              style: TextButton.styleFrom(foregroundColor: Colors.red),
+              child: const Text(AppConstants.logout),
+            ),
+          ],
+        );
+      },
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -79,7 +115,7 @@ class _HomePageState extends State<HomePage> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // Greeting
+                    
                     const Text(
                       '👋',
                       style: TextStyle(fontSize: 32),
@@ -103,7 +139,7 @@ class _HomePageState extends State<HomePage> {
                     ),
                     const SizedBox(height: 32),
                     
-                    // Upgrade Card
+                    
                     Container(
                       padding: const EdgeInsets.all(24),
                       decoration: BoxDecoration(
@@ -190,7 +226,7 @@ class _HomePageState extends State<HomePage> {
                     
                     const SizedBox(height: 32),
                     
-                    // Use on all platforms
+                    
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
@@ -223,7 +259,7 @@ class _HomePageState extends State<HomePage> {
                     
                     const SizedBox(height: 32),
                     
-                    // Prompts section
+                    
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
@@ -250,7 +286,7 @@ class _HomePageState extends State<HomePage> {
                     
                     const SizedBox(height: 16),
                     
-                    // Sample prompts
+                    
                     _buildPromptCard('Phân tích Gains Profile'),
                     const SizedBox(height: 12),
                     _buildPromptCard('Câu hỏi mở về nhu cầu kinh doanh'),
@@ -259,7 +295,7 @@ class _HomePageState extends State<HomePage> {
               ),
             ),
             
-            // Bottom input area
+            
             Container(
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
@@ -275,7 +311,7 @@ class _HomePageState extends State<HomePage> {
               child: SafeArea(
                 child: Row(
                   children: [
-                    // Bot selector
+                    
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                       decoration: BoxDecoration(
@@ -301,7 +337,7 @@ class _HomePageState extends State<HomePage> {
                       ),
                     ),
                     const SizedBox(width: 12),
-                    // Add bot button
+                    
                     Container(
                       padding: const EdgeInsets.all(8),
                       decoration: BoxDecoration(
@@ -311,7 +347,7 @@ class _HomePageState extends State<HomePage> {
                       child: const Icon(Icons.add, size: 18, color: Colors.white),
                     ),
                     const SizedBox(width: 12),
-                    // Input field
+                    
                     Expanded(
                       child: TextField(
                         controller: _messageController,
@@ -323,7 +359,7 @@ class _HomePageState extends State<HomePage> {
                         ),
                       ),
                     ),
-                    // Action buttons
+                    
                     Row(
                       children: [
                         IconButton(
