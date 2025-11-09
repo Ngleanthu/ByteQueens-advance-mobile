@@ -11,6 +11,7 @@ class MyApp extends StatelessWidget {
       title: 'ByteQueens Admin',
       debugShowCheckedModeBanner: false,
       theme: AppTheme.darkTheme,
+      onUnknownRoute: AppRoutes.onUnknownRoute,
     );
   }
 }
