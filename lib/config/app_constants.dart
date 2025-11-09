@@ -212,4 +212,12 @@ class AppConstants {
   static const String noMessages = 'No messages yet';
   static const String startChatting = 'Start a conversation with your group';
   
+
+    
+  // Routes - Groups
+  static const String groupsListRoute = '/groups';
+  static const String createGroupRoute = '/groups/create';
+  static const String groupDetailRoute = '/groups/detail';
+  static const String groupChatRoute = '/groups/chat';
+  
 }
