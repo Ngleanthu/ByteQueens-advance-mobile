@@ -108,4 +108,15 @@ class AppConstants {
   static const String delete = 'Delete';
   static const String chatNow = 'Chat Now';
   static const String noDescription = 'No description available';
+
+  // Preview
+  static const String previewTitle = 'Preview';
+  static const String previewDesc = 'Preview the assistant\'s responses in a chat interface.';
+  static const String previewMode = 'Preview Mode';
+  static const String testYourBot = 'Test Your Bot';
+  static const String testYourBotDesc = 'Ask questions to see how your bot responds.';
+  static const String newThread = '+ New Thread';
+  static const String askMeAnything = 'Ask me anything, press \'/\' for prompts...';
+  static const String startConversation = 'Start a conversation with your bot';
+  
 }
