@@ -18,5 +18,18 @@ class BotService {
     return List.from(_bots);
   }
 
+List<Bot> sortBots(List<Bot> bots, String sortBy) {
+    final sorted = List<Bot>.from(bots);
 
+    switch (sortBy) {
+      case 'name':
+        sorted.sort((a, b) => a.name.compareTo(b.name));
+        break;
+      case 'date':
+        sorted.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+        break;
+    }
+
+    return sorted;
+  }
 }
