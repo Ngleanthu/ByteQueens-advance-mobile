@@ -82,4 +82,30 @@ class AppConstants {
   static const String botPreviewRoute = '/bots/preview';
   static const String botSettingsRoute = '/bots/settings';
   
+  // Bot Management
+  static const String botsTitle = 'Bots';
+  static const String createYourOwnBot = 'Create Your Own Bot';
+  static const String noBots = 'No bots found';
+  static const String searchBots = 'Search...';
+  static const String allBots = 'All Bots';
+  static const String favorites = 'Favorites';
+  static const String sortByName = 'Sort by Name';
+  static const String sortByDate = 'Sort by Date';
+  static const String botName = 'Name';
+  static const String botNameHint = 'Enter a name for your bot (e.g \'Customer Support Bot\')';
+  static const String instructions = 'Instructions';
+  static const String instructionsOptional = 'Instructions (Optional)';
+  static const String instructionsHint = 'Describe how your bot should behave and respond. Add guidelines or specific rules if needed. (e.g \'Always respond with a pirate accent\')';
+  static const String knowledgeBase = 'Knowledge base';
+  static const String knowledgeBaseOptional = 'Knowledge base (Optional)';
+  static const String knowledgeBaseHint = 'Enhance your bot\'s intelligence by adding relevant knowledge sources.';
+  static const String addKnowledgeSource = 'Add knowledge source';
+  static const String model = 'Model';
+  static const String cancel = 'Cancel';
+  static const String create = 'Create';
+  static const String save = 'Save';
+  static const String edit = 'Edit';
+  static const String delete = 'Delete';
+  static const String chatNow = 'Chat Now';
+  static const String noDescription = 'No description available';
 }
