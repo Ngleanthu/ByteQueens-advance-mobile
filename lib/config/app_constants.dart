@@ -182,4 +182,34 @@ class AppConstants {
   static const String settingsTitle = 'Settings';
   static const String settingsDesc = 'Configure the assistant\'s settings.';
   static const String settingsTip = 'Tip: Be specific about role, tone, and response format. Include what the bot should and shouldn\'t do.';
+
+
+
+  // Groups
+  static const String groupsTitle = 'Groups';
+  static const String createNewGroup = 'Create New Group';
+  static const String noGroups = 'No groups found';
+  static const String searchGroups = 'Search groups...';
+  static const String groupName = 'Group Name';
+  static const String groupNameHint = 'Enter group name (e.g., \'Product Team\')';
+  static const String groupDescription = 'Description';
+  static const String groupDescriptionOptional = 'Description (Optional)';
+  static const String groupDescriptionHint = 'Enter a brief description of this group';
+  static const String groupMembers = 'Members';
+  static const String addMembers = 'Add Members';
+  static const String selectMembers = 'Select members to add to this group';
+  static const String noMembersSelected = 'No members selected';
+  static const String member = 'member';
+  static const String members = 'members';
+  static const String messages = 'messages';
+  static const String viewGroup = 'View Group';
+  static const String deleteGroup = 'Delete Group';
+  static const String deleteGroupConfirm = 'Are you sure you want to delete this group?';
+  static const String leaveGroup = 'Leave Group';
+  static const String groupSettings = 'Group Settings';
+  static const String groupChat = 'Chat';
+  static const String sendMessage = 'Send a message...';
+  static const String noMessages = 'No messages yet';
+  static const String startChatting = 'Start a conversation with your group';
+  
 }
