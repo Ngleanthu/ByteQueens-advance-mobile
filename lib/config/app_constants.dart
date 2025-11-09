@@ -60,7 +60,6 @@ class AppConstants {
   static const String codeRequired = 'Please enter verification code';
   static const String codeInvalid = 'Code must be 6 digits';
   
-  // Success Messages
   static const String loginSuccess = 'Login successful!';
   static const String signUpSuccess = 'Account created successfully!';
   static const String verificationSent = 'Verification code sent to your email';
