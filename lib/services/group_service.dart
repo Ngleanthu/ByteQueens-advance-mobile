@@ -77,6 +77,20 @@ class GroupService {
     _groups[group3.id] = group3;
   }
 
+  
+  Future<List<Group>> getAllGroups() async {
+    await Future.delayed(const Duration(milliseconds: 500));
+    return _groups.values.toList()
+      ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
+  }
+
+  
+  Future<Group?> getGroupById(String id) async {
+    await Future.delayed(const Duration(milliseconds: 300));
+    return _groups[id];
+  }
+
+  
   List<User> getAllUsers() {
     return _mockUsers;
   }
