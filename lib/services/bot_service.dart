@@ -13,4 +13,10 @@ class BotService {
   String _currentUserName = 'Nguyễn Lê Anh Thư';
   String _currentUserEmail = 'ngleanth@gmail.com';
 
+  Future<List<Bot>> getAllBots() async {
+    await Future.delayed(const Duration(milliseconds: 500));
+    return List.from(_bots);
+  }
+
+
 }
