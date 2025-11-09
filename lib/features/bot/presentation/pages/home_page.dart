@@ -3,7 +3,7 @@ import 'package:bytequeens_adm/config/theme.dart';
 import 'package:bytequeens_adm/config/app_constants.dart';
 
 class HomePage extends StatefulWidget {
-  const HomePage({super.key});
+  const HomePage({Key? key}) : super(key: key);
 
   @override
   State<HomePage> createState() => _HomePageState();
@@ -40,10 +40,19 @@ class _HomePageState extends State<HomePage> {
                 },
               ),
               ListTile(
+                leading: const Icon(Icons.group, color: Colors.white),
+                title: const Text(AppConstants.myGroups, style: TextStyle(color: Colors.white)),
+                onTap: () {
+                  Navigator.pop(context);
+                  Navigator.pushNamed(context, AppConstants.groupsListRoute);
+                },
+              ),
+              ListTile(
                 leading: const Icon(Icons.person, color: Colors.white),
                 title: const Text(AppConstants.profile, style: TextStyle(color: Colors.white)),
                 onTap: () {
                   Navigator.pop(context);
+                  
                 },
               ),
               ListTile(
@@ -302,7 +311,7 @@ class _HomePageState extends State<HomePage> {
                 color: Colors.white,
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.05),
+                    color: Colors.black.withOpacity(0.05),
                     blurRadius: 10,
                     offset: const Offset(0, -2),
                   ),
@@ -315,7 +324,7 @@ class _HomePageState extends State<HomePage> {
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                       decoration: BoxDecoration(
-                        color: AppTheme.primaryBlue.withValues(alpha: 0.1),
+                        color: AppTheme.primaryBlue.withOpacity(0.1),
                         borderRadius: BorderRadius.circular(20),
                       ),
                       child: Row(
