@@ -53,9 +53,9 @@ class _EmailLoginPageState extends State<EmailLoginPage> {
               ),
             );
 
-            // Navigate back to sign in page (demo - no home page yet)
+            // Navigate to home page
             Navigator.of(context).pushNamedAndRemoveUntil(
-              AppConstants.signInRoute,
+              AppConstants.homeRoute,
               (route) => false,
             );
           } else {

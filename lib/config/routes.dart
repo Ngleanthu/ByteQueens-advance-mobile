@@ -6,6 +6,11 @@ import 'package:bytequeens_adm/features/auth/presentation/pages/email_login_page
 import 'package:bytequeens_adm/features/auth/presentation/pages/sign_up_page.dart';
 import 'package:bytequeens_adm/features/auth/presentation/pages/forgot_password_page.dart';
 import 'package:bytequeens_adm/features/auth/presentation/pages/verification_page.dart';
+import 'package:bytequeens_adm/features/bot/presentation/pages/home_page.dart';
+import 'package:bytequeens_adm/features/bot/presentation/pages/bots_list_page.dart';
+import 'package:bytequeens_adm/features/bot/presentation/pages/create_bot_page.dart';
+import 'package:bytequeens_adm/features/bot/presentation/pages/bot_detail_page.dart';
+import 'package:bytequeens_adm/features/bot/presentation/pages/bot_preview_page.dart';
 
 class AppRoutes {
   static const String initial = AppConstants.splashRoute;
@@ -17,10 +22,12 @@ class AppRoutes {
     AppConstants.signUpRoute: (context) => const SignUpPage(),
     AppConstants.forgotPasswordRoute: (context) => const ForgotPasswordPage(),
     AppConstants.verificationRoute: (context) => const VerificationPage(),
+    AppConstants.homeRoute: (context) => const HomePage(),
+    AppConstants.botsListRoute: (context) => const BotsListPage(),
+    AppConstants.createBotRoute: (context) => const CreateBotPage(),
   };
 
   static Route<dynamic>? onGenerateRoute(RouteSettings settings) {
-    // Xử lý các route động nếu cần
     switch (settings.name) {
       case AppConstants.splashRoute:
         return MaterialPageRoute(
@@ -50,6 +57,47 @@ class AppRoutes {
       case AppConstants.verificationRoute:
         return MaterialPageRoute(
           builder: (context) => const VerificationPage(),
+          settings: settings,
+        );
+      case AppConstants.homeRoute:
+        return MaterialPageRoute(
+          builder: (context) => const HomePage(),
+          settings: settings,
+        );
+      case AppConstants.botsListRoute:
+        return MaterialPageRoute(
+          builder: (context) => const BotsListPage(),
+          settings: settings,
+        );
+      case AppConstants.createBotRoute:
+        return MaterialPageRoute(
+          builder: (context) => const CreateBotPage(),
+          settings: settings,
+        );
+      case AppConstants.botDetailRoute:
+        final botId = settings.arguments as String?;
+        if (botId == null) {
+          return MaterialPageRoute(
+            builder: (context) => const Scaffold(
+              body: Center(child: Text('Bot ID required')),
+            ),
+          );
+        }
+        return MaterialPageRoute(
+          builder: (context) => BotDetailPage(botId: botId),
+          settings: settings,
+        );
+      case AppConstants.botPreviewRoute:
+        final botId = settings.arguments as String?;
+        if (botId == null) {
+          return MaterialPageRoute(
+            builder: (context) => const Scaffold(
+              body: Center(child: Text('Bot ID required')),
+            ),
+          );
+        }
+        return MaterialPageRoute(
+          builder: (context) => BotPreviewPage(botId: botId),
           settings: settings,
         );
       default:
