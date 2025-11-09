@@ -32,6 +32,34 @@ class BotService {
   }
 
   
+  Future<Bot> createBot({
+    required String name,
+    String? description,
+    String? instructions,
+    required AIModel model,
+    List<KnowledgeSource>? knowledgeSources,
+  }) async {
+    await Future.delayed(const Duration(seconds: 1));
+
+    final bot = Bot(
+      id: DateTime.now().millisecondsSinceEpoch.toString(),
+      name: name,
+      description: description,
+      instructions: instructions,
+      model: model,
+      knowledgeSources: knowledgeSources ?? [],
+      createdAt: DateTime.now(),
+      updatedAt: DateTime.now(),
+      ownerId: _currentUserId,
+      ownerName: _currentUserName,
+      ownerEmail: _currentUserEmail,
+    );
+
+    _bots.add(bot);
+    return bot;
+  }
+
+  
   Future<Bot> updateBot(Bot bot) async {
     await Future.delayed(const Duration(milliseconds: 800));
 
@@ -63,7 +91,59 @@ class BotService {
     throw Exception('Bot not found');
   }
 
+  
+  Future<Bot> addKnowledgeSource(String botId, KnowledgeSource source) async {
+    await Future.delayed(const Duration(milliseconds: 500));
 
+    final bot = await getBotById(botId);
+    if (bot != null) {
+      final sources = List<KnowledgeSource>.from(bot.knowledgeSources);
+      sources.add(source);
+      final updated = bot.copyWith(knowledgeSources: sources);
+      return await updateBot(updated);
+    }
+
+    throw Exception('Bot not found');
+  }
+
+  
+  Future<Bot> removeKnowledgeSource(String botId, String sourceId) async {
+    await Future.delayed(const Duration(milliseconds: 500));
+
+    final bot = await getBotById(botId);
+    if (bot != null) {
+      final sources = bot.knowledgeSources
+          .where((s) => s.id != sourceId)
+          .toList();
+      final updated = bot.copyWith(knowledgeSources: sources);
+      return await updateBot(updated);
+    }
+
+    throw Exception('Bot not found');
+  }
+
+  
+  Future<List<Bot>> searchBots(String query) async {
+    await Future.delayed(const Duration(milliseconds: 400));
+
+    if (query.isEmpty) {
+      return getAllBots();
+    }
+
+    final lowerQuery = query.toLowerCase();
+    return _bots.where((bot) {
+      return bot.name.toLowerCase().contains(lowerQuery) ||
+          (bot.description?.toLowerCase().contains(lowerQuery) ?? false);
+    }).toList();
+  }
+
+  
+  Future<List<Bot>> getFavoriteBots() async {
+    await Future.delayed(const Duration(milliseconds: 300));
+    return _bots.where((bot) => bot.isFavorite).toList();
+  }
+
+  
   List<Bot> sortBots(List<Bot> bots, String sortBy) {
     final sorted = List<Bot>.from(bots);
 
@@ -78,32 +158,28 @@ class BotService {
 
     return sorted;
   }
-  Future<Bot> createBot({
-    required String name,
-    String? description,
-    String? instructions,
-    required AIModel model,
-    List<KnowledgeSource>? knowledgeSources,
-  }) async {
-    await Future.delayed(const Duration(seconds: 1));
 
-    final bot = Bot(
-      id: DateTime.now().millisecondsSinceEpoch.toString(),
-      name: name,
-      description: description,
-      instructions: instructions,
-      model: model,
-      knowledgeSources: knowledgeSources ?? [],
-      createdAt: DateTime.now(),
-      updatedAt: DateTime.now(),
-      ownerId: _currentUserId,
-      ownerName: _currentUserName,
-      ownerEmail: _currentUserEmail,
-    );
+  
+  Future<String> sendMessage(String botId, String message) async {
+    await Future.delayed(const Duration(seconds: 2));
 
-    _bots.add(bot);
-    return bot;
+    final bot = await getBotById(botId);
+    if (bot == null) {
+      return 'Bot not found';
+    }
+
+    
+    return 'This is a mock response from ${bot.name}. '
+        'In production, this would use the ${bot.model.displayName} model '
+        'and knowledge from ${bot.knowledgeSources.length} sources.';
   }
 
-
+  
+  Map<String, String> getCurrentUser() {
+    return {
+      'id': _currentUserId,
+      'name': _currentUserName,
+      'email': _currentUserEmail,
+    };
+  }
 }
