@@ -71,4 +71,15 @@ class AppConstants {
   static const String mockEmail = 'test@bytequeens.com';
   static const String mockPassword = '123456';
   static const String mockVerificationCode = '123456';
+
+
+  // Routes - Main App
+  static const String homeRoute = '/home';
+  static const String botsListRoute = '/bots';
+  static const String createBotRoute = '/bots/create';
+  static const String botDetailRoute = '/bots/detail';
+  static const String knowledgeBaseRoute = '/bots/knowledge';
+  static const String botPreviewRoute = '/bots/preview';
+  static const String botSettingsRoute = '/bots/settings';
+  
 }
