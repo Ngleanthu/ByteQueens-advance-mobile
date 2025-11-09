@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:bytequeens_adm/config/theme.dart';
+import 'package:bytequeens_adm/config/app_constants.dart';
 
 class SplashPage extends StatefulWidget {
   const SplashPage({super.key});
@@ -38,6 +39,8 @@ class _SplashPageState extends State<SplashPage>
     );
 
     _animationController.forward();
+
+
   }
 
   @override
