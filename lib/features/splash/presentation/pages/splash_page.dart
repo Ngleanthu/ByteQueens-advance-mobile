@@ -40,7 +40,11 @@ class _SplashPageState extends State<SplashPage>
 
     _animationController.forward();
 
-
+    Future.delayed(const Duration(milliseconds: 2500), () {
+      if (mounted) {
+        Navigator.of(context).pushReplacementNamed(AppConstants.signInRoute);
+      }
+    });
   }
 
   @override
