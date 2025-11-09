@@ -177,5 +177,9 @@ class AppConstants {
   static const String searchKnowledgeUnits = 'Search knowledge units...';
   static const String noKnowledgeUnits = 'No knowledge units found';
   static const String clickToAddKnowledge = 'Click here to add new knowledge';
-  
+    
+  // Settings
+  static const String settingsTitle = 'Settings';
+  static const String settingsDesc = 'Configure the assistant\'s settings.';
+  static const String settingsTip = 'Tip: Be specific about role, tone, and response format. Include what the bot should and shouldn\'t do.';
 }
