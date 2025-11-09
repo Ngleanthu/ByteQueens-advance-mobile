@@ -6,7 +6,7 @@ import 'package:bytequeens_adm/data/models/ai_model.dart';
 import 'package:bytequeens_adm/data/models/knowledge_source.dart';
 
 class CreateBotPage extends StatefulWidget {
-  const CreateBotPage({Key? key}) : super(key: key);
+  const CreateBotPage({super.key});
 
   @override
   State<CreateBotPage> createState() => _CreateBotPageState();
@@ -232,7 +232,7 @@ class _CreateBotPageState extends State<CreateBotPage> {
       leading: Container(
         padding: const EdgeInsets.all(8),
         decoration: BoxDecoration(
-          color: AppTheme.primaryBlue.withOpacity(0.1),
+          color: AppTheme.primaryBlue.withValues(alpha: 0.1),
           borderRadius: BorderRadius.circular(8),
         ),
         child: Icon(icon, color: AppTheme.primaryBlue, size: 24),
@@ -512,7 +512,7 @@ class _CreateBotPageState extends State<CreateBotPage> {
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(12),
                       ),
-                      disabledBackgroundColor: AppTheme.primaryBlue.withOpacity(0.5),
+                      disabledBackgroundColor: AppTheme.primaryBlue.withValues(alpha: 0.5),
                     ),
                     child: _isLoading
                         ? const SizedBox(

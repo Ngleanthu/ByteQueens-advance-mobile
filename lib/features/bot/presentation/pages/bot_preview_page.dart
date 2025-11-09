@@ -7,7 +7,7 @@ import 'package:bytequeens_adm/data/models/bot.dart';
 class BotPreviewPage extends StatefulWidget {
   final String botId;
 
-  const BotPreviewPage({Key? key, required this.botId}) : super(key: key);
+  const BotPreviewPage({super.key, required this.botId});
 
   @override
   State<BotPreviewPage> createState() => _BotPreviewPageState();
@@ -207,7 +207,7 @@ class _BotPreviewPageState extends State<BotPreviewPage> {
                       children: [
                         CircleAvatar(
                           radius: 16,
-                          backgroundColor: AppTheme.primaryBlue.withOpacity(0.1),
+                          backgroundColor: AppTheme.primaryBlue.withValues(alpha: 0.1),
                           child: Icon(
                             Icons.smart_toy,
                             size: 18,
@@ -245,7 +245,7 @@ class _BotPreviewPageState extends State<BotPreviewPage> {
                     color: Colors.white,
                     boxShadow: [
                       BoxShadow(
-                        color: Colors.black.withOpacity(0.05),
+                        color: Colors.black.withValues(alpha: 0.05),
                         blurRadius: 4,
                         offset: const Offset(0, -2),
                       ),
@@ -325,7 +325,7 @@ class _BotPreviewPageState extends State<BotPreviewPage> {
           if (!message.isUser) ...[
             CircleAvatar(
               radius: 16,
-              backgroundColor: AppTheme.primaryBlue.withOpacity(0.1),
+              backgroundColor: AppTheme.primaryBlue.withValues(alpha: 0.1),
               child: Icon(
                 Icons.smart_toy,
                 size: 18,
@@ -404,7 +404,7 @@ class _BotPreviewPageState extends State<BotPreviewPage> {
           width: 6,
           height: 6,
           decoration: BoxDecoration(
-            color: Colors.grey.withOpacity(0.3 + (value * 0.4)),
+            color: Colors.grey.withValues(alpha: 0.3 + (value * 0.4)),
             shape: BoxShape.circle,
           ),
         );

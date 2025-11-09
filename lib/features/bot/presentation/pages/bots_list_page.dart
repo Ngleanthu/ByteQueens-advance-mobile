@@ -6,7 +6,7 @@ import 'package:bytequeens_adm/data/models/bot.dart';
 import 'package:bytequeens_adm/data/models/ai_model.dart';
 
 class BotsListPage extends StatefulWidget {
-  const BotsListPage({Key? key}) : super(key: key);
+  const BotsListPage({super.key});
 
   @override
   State<BotsListPage> createState() => _BotsListPageState();
@@ -223,7 +223,7 @@ class _BotsListPageState extends State<BotsListPage> {
                 Container(
                   decoration: BoxDecoration(
                     gradient: LinearGradient(
-                      colors: [AppTheme.primaryBlue, AppTheme.primaryBlue.withOpacity(0.8)],
+                      colors: [AppTheme.primaryBlue, AppTheme.primaryBlue.withValues(alpha: 0.8)],
                     ),
                     borderRadius: BorderRadius.circular(12),
                   ),
@@ -314,7 +314,7 @@ class _BotsListPageState extends State<BotsListPage> {
         border: Border.all(color: Colors.grey[200]!),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.03),
+            color: Colors.black.withValues(alpha: 0.03),
             blurRadius: 8,
             offset: const Offset(0, 2),
           ),
@@ -329,7 +329,7 @@ class _BotsListPageState extends State<BotsListPage> {
               Container(
                 padding: const EdgeInsets.all(10),
                 decoration: BoxDecoration(
-                  color: AppTheme.primaryBlue.withOpacity(0.1),
+                  color: AppTheme.primaryBlue.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(10),
                 ),
                 child: Icon(
@@ -449,7 +449,7 @@ class _BotsListPageState extends State<BotsListPage> {
                   icon: const Icon(Icons.chat, size: 18),
                   label: const Text(AppConstants.chatNow),
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: AppTheme.primaryBlue.withOpacity(0.1),
+                    backgroundColor: AppTheme.primaryBlue.withValues(alpha: 0.1),
                     foregroundColor: AppTheme.primaryBlue,
                     elevation: 0,
                     shape: RoundedRectangleBorder(

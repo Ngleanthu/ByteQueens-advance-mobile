@@ -8,7 +8,7 @@ import 'package:bytequeens_adm/data/models/ai_model.dart';
 class BotDetailPage extends StatefulWidget {
   final String botId;
 
-  const BotDetailPage({Key? key, required this.botId}) : super(key: key);
+  const BotDetailPage({super.key, required this.botId});
 
   @override
   State<BotDetailPage> createState() => _BotDetailPageState();
@@ -121,7 +121,7 @@ class _BotDetailPageState extends State<BotDetailPage>
                         color: Colors.white,
                         boxShadow: [
                           BoxShadow(
-                            color: Colors.black.withOpacity(0.05),
+                            color: Colors.black.withValues(alpha: 0.05),
                             blurRadius: 4,
                             offset: const Offset(0, 2),
                           ),
@@ -414,7 +414,7 @@ class _BotDetailPageState extends State<BotDetailPage>
           ),
           child: Column(
             children: [
-              Icon(Icons.smart_toy, size: 64, color: AppTheme.primaryBlue.withOpacity(0.3)),
+              Icon(Icons.smart_toy, size: 64, color: AppTheme.primaryBlue.withValues(alpha: 0.3)),
               const SizedBox(height: 16),
               const Text(
                 AppConstants.testYourBot,
@@ -478,7 +478,7 @@ class _BotDetailPageState extends State<BotDetailPage>
                 );
               },
               style: ElevatedButton.styleFrom(
-                backgroundColor: AppTheme.primaryBlue.withOpacity(0.1),
+                backgroundColor: AppTheme.primaryBlue.withValues(alpha: 0.1),
                 foregroundColor: AppTheme.primaryBlue,
                 elevation: 0,
                 shape: RoundedRectangleBorder(
@@ -613,9 +613,9 @@ class _BotDetailPageState extends State<BotDetailPage>
         Container(
           padding: const EdgeInsets.all(12),
           decoration: BoxDecoration(
-            color: AppTheme.primaryBlue.withOpacity(0.1),
+            color: AppTheme.primaryBlue.withValues(alpha: 0.1),
             borderRadius: BorderRadius.circular(10),
-            border: Border.all(color: AppTheme.primaryBlue.withOpacity(0.2)),
+            border: Border.all(color: AppTheme.primaryBlue.withValues(alpha: 0.2)),
           ),
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -634,7 +634,7 @@ class _BotDetailPageState extends State<BotDetailPage>
                   AppConstants.settingsTip.split(': ')[1],
                   style: TextStyle(
                     fontSize: 13,
-                    color: AppTheme.darkBlue.withOpacity(0.8),
+                    color: AppTheme.darkBlue.withValues(alpha: 0.8),
                   ),
                 ),
               ),
