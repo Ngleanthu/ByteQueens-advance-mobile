@@ -135,4 +135,15 @@ class AppConstants {
   static const String profile = 'Profile';
   static const String logout = 'Logout';
   
+  // Profile & Settings
+  static const String myProfile = 'My Profile';
+  static const String accountSettings = 'Account Settings';
+  static const String editProfile = 'Edit Profile';
+  static const String changePassword = 'Change Password';
+  static const String notifications = 'Notifications';
+  static const String language = 'Language';
+  static const String about = 'About';
+  static const String version = 'Version';
+  static const String logoutConfirm = 'Are you sure you want to logout?';
+  
 }
