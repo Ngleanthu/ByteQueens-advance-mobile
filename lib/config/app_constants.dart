@@ -170,4 +170,12 @@ class AppConstants {
   static const String notion = 'Notion';
   static const String notionDesc = 'Sync your Notion workspace';
   
+  // Knowledge Base
+  static const String knowledgeBaseTitle = 'Knowledge Base';
+  static const String knowledgeBaseDesc = 'Choose a knowledge base below to add knowledge units.';
+  static const String addKnowledgeUnit = '+ Add Knowledge Unit';
+  static const String searchKnowledgeUnits = 'Search knowledge units...';
+  static const String noKnowledgeUnits = 'No knowledge units found';
+  static const String clickToAddKnowledge = 'Click here to add new knowledge';
+  
 }
