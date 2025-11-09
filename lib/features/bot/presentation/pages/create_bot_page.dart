@@ -79,7 +79,7 @@ class _CreateBotPageState extends State<CreateBotPage> {
         ),
         child: Column(
           children: [
-            
+            // Header
             Padding(
               padding: const EdgeInsets.all(16),
               child: Row(
@@ -100,7 +100,7 @@ class _CreateBotPageState extends State<CreateBotPage> {
               ),
             ),
             const Divider(height: 1),
-            
+            // Model list
             Expanded(
               child: ListView.builder(
                 itemCount: AIModel.values.length,
@@ -149,6 +149,128 @@ class _CreateBotPageState extends State<CreateBotPage> {
     }
   }
 
+  void _showKnowledgeSourceSelector() {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (context) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Padding(
+              padding: const EdgeInsets.all(16),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  const Text(
+                    AppConstants.knowledgeSources,
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.close),
+                    onPressed: () => Navigator.pop(context),
+                  ),
+                ],
+              ),
+            ),
+            _buildKnowledgeSourceItem(
+              Icons.description,
+              AppConstants.localFiles,
+              AppConstants.localFilesDesc,
+              KnowledgeSourceType.localFiles,
+            ),
+            _buildKnowledgeSourceItem(
+              Icons.language,
+              AppConstants.website,
+              AppConstants.websiteDesc,
+              KnowledgeSourceType.website,
+            ),
+            _buildKnowledgeSourceItem(
+              Icons.folder,
+              AppConstants.googleDrive,
+              AppConstants.googleDriveDesc,
+              KnowledgeSourceType.googleDrive,
+            ),
+            _buildKnowledgeSourceItem(
+              Icons.chat,
+              AppConstants.slack,
+              AppConstants.slackDesc,
+              KnowledgeSourceType.slack,
+            ),
+            _buildKnowledgeSourceItem(
+              Icons.article,
+              AppConstants.confluence,
+              AppConstants.confluenceDesc,
+              KnowledgeSourceType.confluence,
+            ),
+            _buildKnowledgeSourceItem(
+              Icons.note,
+              AppConstants.notion,
+              AppConstants.notionDesc,
+              KnowledgeSourceType.notion,
+            ),
+            const SizedBox(height: 16),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildKnowledgeSourceItem(
+    IconData icon,
+    String title,
+    String subtitle,
+    KnowledgeSourceType type,
+  ) {
+    return ListTile(
+      leading: Container(
+        padding: const EdgeInsets.all(8),
+        decoration: BoxDecoration(
+          color: AppTheme.primaryBlue.withOpacity(0.1),
+          borderRadius: BorderRadius.circular(8),
+        ),
+        child: Icon(icon, color: AppTheme.primaryBlue, size: 24),
+      ),
+      title: Text(
+        title,
+        style: const TextStyle(fontWeight: FontWeight.w600),
+      ),
+      subtitle: Text(subtitle, style: const TextStyle(fontSize: 13)),
+      trailing: const Icon(Icons.arrow_forward_ios, size: 16),
+      onTap: () {
+        Navigator.pop(context);
+        _showAddSourceDialog(type);
+      },
+    );
+  }
+
+  void _showAddSourceDialog(KnowledgeSourceType type) {
+    // Mock: Just add a sample source
+    final source = KnowledgeSource(
+      id: DateTime.now().millisecondsSinceEpoch.toString(),
+      name: '${type.toString().split('.').last} source',
+      type: type,
+      createdAt: DateTime.now(),
+    );
+
+    setState(() {
+      _knowledgeSources.add(source);
+    });
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('${source.getTypeName()} added'),
+        backgroundColor: Colors.green,
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -174,7 +296,7 @@ class _CreateBotPageState extends State<CreateBotPage> {
         child: ListView(
           padding: const EdgeInsets.all(16),
           children: [
-            
+            // Name field
             const Text(
               '${AppConstants.botName} *',
               style: TextStyle(
@@ -210,7 +332,7 @@ class _CreateBotPageState extends State<CreateBotPage> {
 
             const SizedBox(height: 24),
 
-            
+            // Instructions field
             Text(
               AppConstants.instructionsOptional,
               style: const TextStyle(
@@ -241,7 +363,7 @@ class _CreateBotPageState extends State<CreateBotPage> {
 
             const SizedBox(height: 24),
 
-            
+            // Knowledge base
             Text(
               AppConstants.knowledgeBaseOptional,
               style: const TextStyle(
@@ -259,7 +381,7 @@ class _CreateBotPageState extends State<CreateBotPage> {
             ),
             const SizedBox(height: 12),
 
-            
+            // Knowledge sources list
             if (_knowledgeSources.isNotEmpty)
               ..._knowledgeSources.map((source) {
                 return Container(
@@ -296,9 +418,29 @@ class _CreateBotPageState extends State<CreateBotPage> {
                   ),
                 );
               }).toList(),
+
+            // Add knowledge source button
+            OutlinedButton.icon(
+              onPressed: _showKnowledgeSourceSelector,
+              icon: const Icon(Icons.add),
+              label: const Text(AppConstants.addKnowledgeSource),
+              style: OutlinedButton.styleFrom(
+                foregroundColor: AppTheme.primaryBlue,
+                side: BorderSide(
+                  color: AppTheme.primaryBlue,
+                  style: BorderStyle.solid,
+                  width: 1.5,
+                ),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                padding: const EdgeInsets.symmetric(vertical: 14),
+              ),
+            ),
+
             const SizedBox(height: 24),
 
-            
+            // Model selector
             const Text(
               AppConstants.model,
               style: TextStyle(
@@ -336,7 +478,7 @@ class _CreateBotPageState extends State<CreateBotPage> {
 
             const SizedBox(height: 32),
 
-            
+            // Action buttons
             Row(
               children: [
                 Expanded(
