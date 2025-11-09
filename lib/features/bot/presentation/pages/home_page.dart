@@ -40,29 +40,13 @@ class _HomePageState extends State<HomePage> {
                 },
               ),
               ListTile(
-                leading: const Icon(Icons.group, color: Colors.white),
-                title: const Text(AppConstants.myGroups, style: TextStyle(color: Colors.white)),
-                onTap: () {
-                  Navigator.pop(context);
-                  Navigator.pushNamed(context, AppConstants.groupsListRoute);
-                },
-              ),
-              ListTile(
                 leading: const Icon(Icons.person, color: Colors.white),
                 title: const Text(AppConstants.profile, style: TextStyle(color: Colors.white)),
                 onTap: () {
                   Navigator.pop(context);
-                  // TODO: Navigate to profile page
                 },
               ),
-              ListTile(
-                leading: const Icon(Icons.logout, color: Colors.white),
-                title: const Text(AppConstants.logout, style: TextStyle(color: Colors.white)),
-                onTap: () {
-                  Navigator.pop(context);
-                  _showLogoutConfirmation();
-                },
-              ),
+              
             ],
           ),
         ),
@@ -70,35 +54,6 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
-  void _showLogoutConfirmation() {
-    showDialog(
-      context: context,
-      builder: (context) {
-        return AlertDialog(
-          title: const Text(AppConstants.logout),
-          content: const Text(AppConstants.logoutConfirm),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text(AppConstants.cancel),
-            ),
-            TextButton(
-              onPressed: () {
-                Navigator.pop(context);
-                Navigator.pushNamedAndRemoveUntil(
-                  context,
-                  AppConstants.signInRoute,
-                  (route) => false,
-                );
-              },
-              style: TextButton.styleFrom(foregroundColor: Colors.red),
-              child: const Text(AppConstants.logout),
-            ),
-          ],
-        );
-      },
-    );
-  }
 
   @override
   Widget build(BuildContext context) {
