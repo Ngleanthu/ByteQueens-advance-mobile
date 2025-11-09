@@ -11,6 +11,8 @@ import 'package:bytequeens_adm/features/bot/presentation/pages/bots_list_page.da
 import 'package:bytequeens_adm/features/bot/presentation/pages/create_bot_page.dart';
 import 'package:bytequeens_adm/features/bot/presentation/pages/bot_detail_page.dart';
 import 'package:bytequeens_adm/features/bot/presentation/pages/bot_preview_page.dart';
+import 'package:bytequeens_adm/features/group/presentation/pages/groups_list_page.dart';
+import 'package:bytequeens_adm/features/group/presentation/pages/create_group_page.dart';
 
 class AppRoutes {
   static const String initial = AppConstants.splashRoute;
@@ -25,6 +27,8 @@ class AppRoutes {
     AppConstants.homeRoute: (context) => const HomePage(),
     AppConstants.botsListRoute: (context) => const BotsListPage(),
     AppConstants.createBotRoute: (context) => const CreateBotPage(),
+    AppConstants.groupsListRoute: (context) => const GroupsListPage(),
+    AppConstants.createGroupRoute: (context) => const CreateGroupPage(),
   };
 
   static Route<dynamic>? onGenerateRoute(RouteSettings settings) {
