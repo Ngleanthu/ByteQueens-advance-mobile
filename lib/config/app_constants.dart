@@ -146,7 +146,15 @@ class AppConstants {
   static const String version = 'Version';
   static const String logoutConfirm = 'Are you sure you want to logout?';
   
-
+  // Bot Detail
+  static const String knowledge = 'Knowledge';
+  static const String preview = 'Preview';
+  static const String settings = 'Settings';
+  static const String shareYourBot = 'Share Your Bot';
+  static const String searchByGroupOrEmail = 'Search by group name or email';
+  static const String owner = 'Owner';
+  static const String user = 'User';
+  
   // Knowledge Sources
   static const String knowledgeSources = 'Knowledge Sources';
   static const String localFiles = 'Local files';
