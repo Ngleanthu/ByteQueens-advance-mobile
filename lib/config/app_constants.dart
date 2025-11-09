@@ -119,4 +119,20 @@ class AppConstants {
   static const String askMeAnything = 'Ask me anything, press \'/\' for prompts...';
   static const String startConversation = 'Start a conversation with your bot';
   
+  static const String greeting = 'Hi, good evening!';
+  static const String personalAssistant = 'I\'m Jarvis, your personal assistant.';
+  static const String upgradePro = 'Upgrade to the Pro version for unlimited access with a 1-month free trial!';
+  static const String orInviteFriends = 'Or invite friends to get';
+  static const String freePremium = 'Free premium subscription';
+  static const String startFreeTrial = 'Start Free Trial';
+  static const String inviteFriends = '🎁 Invite Friends';
+  static const String useOnAllPlatforms = 'Use Jarvis on all platforms';
+  static const String downloadDesc = 'Download Jarvis on your desktop, mobile, and browser.';
+  static const String dontKnowPrompt = 'Don\'t know what to say? Use a prompt!';
+  static const String viewAll = 'View all';
+  static const String myBots = 'My Bots';
+  static const String myGroups = 'My Groups';
+  static const String profile = 'Profile';
+  static const String logout = 'Logout';
+  
 }
