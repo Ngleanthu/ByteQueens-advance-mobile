@@ -1,6 +1,7 @@
 import 'package:bytequeens_adm/data/models/group.dart';
 import 'package:bytequeens_adm/data/models/user.dart';
 
+
 class GroupService {
   
   static final GroupService _instance = GroupService._internal();
@@ -88,6 +89,131 @@ class GroupService {
   Future<Group?> getGroupById(String id) async {
     await Future.delayed(const Duration(milliseconds: 300));
     return _groups[id];
+  }
+
+  
+  Future<Group> createGroup({
+    required String name,
+    String? description,
+    required List<User> members,
+    required String createdBy,
+  }) async {
+    await Future.delayed(const Duration(seconds: 1));
+
+    final group = Group(
+      id: 'g${DateTime.now().millisecondsSinceEpoch}',
+      name: name,
+      description: description,
+      members: members,
+      createdBy: createdBy,
+      createdAt: DateTime.now(),
+      messageCount: 0,
+    );
+
+    _groups[group.id] = group;
+    return group;
+  }
+
+  
+  Future<Group> updateGroup({
+    required String id,
+    String? name,
+    String? description,
+    List<User>? members,
+  }) async {
+    await Future.delayed(const Duration(milliseconds: 800));
+
+    final existingGroup = _groups[id];
+    if (existingGroup == null) {
+      throw Exception('Group not found');
+    }
+
+    final updatedGroup = existingGroup.copyWith(
+      name: name,
+      description: description,
+      members: members,
+      updatedAt: DateTime.now(),
+    );
+
+    _groups[id] = updatedGroup;
+    return updatedGroup;
+  }
+
+  
+  Future<void> deleteGroup(String id) async {
+    await Future.delayed(const Duration(milliseconds: 500));
+    _groups.remove(id);
+  }
+
+  
+  Future<Group> addMember(String groupId, User user) async {
+    await Future.delayed(const Duration(milliseconds: 500));
+
+    final group = _groups[groupId];
+    if (group == null) {
+      throw Exception('Group not found');
+    }
+
+    if (group.members.any((m) => m.id == user.id)) {
+      throw Exception('User already in group');
+    }
+
+    final updatedMembers = [...group.members, user];
+    final updatedGroup = group.copyWith(
+      members: updatedMembers,
+      updatedAt: DateTime.now(),
+    );
+
+    _groups[groupId] = updatedGroup;
+    return updatedGroup;
+  }
+
+  
+  Future<Group> removeMember(String groupId, String userId) async {
+    await Future.delayed(const Duration(milliseconds: 500));
+
+    final group = _groups[groupId];
+    if (group == null) {
+      throw Exception('Group not found');
+    }
+
+    final updatedMembers = group.members.where((m) => m.id != userId).toList();
+    final updatedGroup = group.copyWith(
+      members: updatedMembers,
+      updatedAt: DateTime.now(),
+    );
+
+    _groups[groupId] = updatedGroup;
+    return updatedGroup;
+  }
+
+  
+  Future<List<Group>> searchGroups(String query) async {
+    await Future.delayed(const Duration(milliseconds: 400));
+
+    if (query.isEmpty) {
+      return getAllGroups();
+    }
+
+    final lowerQuery = query.toLowerCase();
+    return _groups.values.where((group) {
+      return group.name.toLowerCase().contains(lowerQuery) ||
+          (group.description?.toLowerCase().contains(lowerQuery) ?? false);
+    }).toList()
+      ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
+  }
+
+  
+  Future<List<User>> getAvailableUsers(String groupId) async {
+    await Future.delayed(const Duration(milliseconds: 300));
+
+    final group = _groups[groupId];
+    if (group == null) {
+      return _mockUsers;
+    }
+
+    final memberIds = group.members.map((m) => m.id).toSet();
+    return _mockUsers.where((user) => !memberIds.contains(user.id)).toList();
   }
 
   
