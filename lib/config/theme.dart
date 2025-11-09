@@ -34,7 +34,6 @@ class AppTheme {
         primary: primaryBlue,
         secondary: navyBlue,
         surface: navyBlue,
-        background: darkBlue,
       ),
       
       // AppBar Theme
@@ -84,21 +83,21 @@ class AppTheme {
       // Input Decoration Theme
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
-        fillColor: navyBlue.withOpacity(0.5),
+        fillColor: navyBlue.withValues(alpha: 0.5),
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide(color: mediumBlue.withOpacity(0.3)),
+          borderSide: BorderSide(color: mediumBlue.withValues(alpha: 0.3)),
         ),
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide(color: mediumBlue.withOpacity(0.3)),
+          borderSide: BorderSide(color: mediumBlue.withValues(alpha: 0.3)),
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
           borderSide: const BorderSide(color: primaryBlue, width: 2),
         ),
         labelStyle: const TextStyle(color: lightText),
-        hintStyle: TextStyle(color: lightText.withOpacity(0.5)),
+        hintStyle: TextStyle(color: lightText.withValues(alpha: 0.5)),
       ),
       
       // Elevated Button Theme
@@ -109,7 +108,7 @@ class AppTheme {
           padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(12),
-            side: BorderSide(color: mediumBlue.withOpacity(0.3)),
+            side: BorderSide(color: mediumBlue.withValues(alpha: 0.3)),
           ),
           elevation: 0,
         ),

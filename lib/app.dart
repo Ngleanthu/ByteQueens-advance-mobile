@@ -3,7 +3,7 @@ import 'package:bytequeens_adm/config/theme.dart';
 import 'package:bytequeens_adm/config/routes.dart';
 
 class MyApp extends StatelessWidget {
-  const MyApp({Key? key}) : super(key: key);
+  const MyApp({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -11,6 +11,9 @@ class MyApp extends StatelessWidget {
       title: 'ByteQueens Admin',
       debugShowCheckedModeBanner: false,
       theme: AppTheme.darkTheme,
+      initialRoute: AppRoutes.initial,
+      routes: AppRoutes.routes,
+      onGenerateRoute: AppRoutes.onGenerateRoute,
       onUnknownRoute: AppRoutes.onUnknownRoute,
     );
   }
