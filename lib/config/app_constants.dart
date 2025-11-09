@@ -146,4 +146,20 @@ class AppConstants {
   static const String version = 'Version';
   static const String logoutConfirm = 'Are you sure you want to logout?';
   
+
+  // Knowledge Sources
+  static const String knowledgeSources = 'Knowledge Sources';
+  static const String localFiles = 'Local files';
+  static const String localFilesDesc = 'Upload PDFs, docs, and more';
+  static const String website = 'Website';
+  static const String websiteDesc = 'Sync any website content instantly';
+  static const String googleDrive = 'Google Drive';
+  static const String googleDriveDesc = 'Access your Drive files seamlessly';
+  static const String slack = 'Slack';
+  static const String slackDesc = 'Connect your team conversations';
+  static const String confluence = 'Confluence';
+  static const String confluenceDesc = 'Import your knowledge base';
+  static const String notion = 'Notion';
+  static const String notionDesc = 'Sync your Notion workspace';
+  
 }
