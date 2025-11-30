@@ -33,7 +33,10 @@ class _HomePageState extends State<HomePage> {
             children: [
               ListTile(
                 leading: const Icon(Icons.smart_toy, color: Colors.white),
-                title: const Text(AppConstants.myBots, style: TextStyle(color: Colors.white)),
+                title: const Text(
+                  AppConstants.myBots,
+                  style: TextStyle(color: Colors.white),
+                ),
                 onTap: () {
                   Navigator.pop(context);
                   Navigator.pushNamed(context, AppConstants.botsListRoute);
@@ -41,7 +44,10 @@ class _HomePageState extends State<HomePage> {
               ),
               ListTile(
                 leading: const Icon(Icons.group, color: Colors.white),
-                title: const Text(AppConstants.myGroups, style: TextStyle(color: Colors.white)),
+                title: const Text(
+                  AppConstants.myGroups,
+                  style: TextStyle(color: Colors.white),
+                ),
                 onTap: () {
                   Navigator.pop(context);
                   Navigator.pushNamed(context, AppConstants.groupsListRoute);
@@ -49,15 +55,20 @@ class _HomePageState extends State<HomePage> {
               ),
               ListTile(
                 leading: const Icon(Icons.person, color: Colors.white),
-                title: const Text(AppConstants.profile, style: TextStyle(color: Colors.white)),
+                title: const Text(
+                  AppConstants.profile,
+                  style: TextStyle(color: Colors.white),
+                ),
                 onTap: () {
                   Navigator.pop(context);
-                  
                 },
               ),
               ListTile(
                 leading: const Icon(Icons.logout, color: Colors.white),
-                title: const Text(AppConstants.logout, style: TextStyle(color: Colors.white)),
+                title: const Text(
+                  AppConstants.logout,
+                  style: TextStyle(color: Colors.white),
+                ),
                 onTap: () {
                   Navigator.pop(context);
                   _showLogoutConfirmation();
@@ -124,11 +135,7 @@ class _HomePageState extends State<HomePage> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    
-                    const Text(
-                      '👋',
-                      style: TextStyle(fontSize: 32),
-                    ),
+                    const Text('👋', style: TextStyle(fontSize: 32)),
                     const SizedBox(height: 16),
                     const Text(
                       AppConstants.greeting,
@@ -141,14 +148,10 @@ class _HomePageState extends State<HomePage> {
                     const SizedBox(height: 8),
                     const Text(
                       AppConstants.personalAssistant,
-                      style: TextStyle(
-                        fontSize: 16,
-                        color: Colors.grey,
-                      ),
+                      style: TextStyle(fontSize: 16, color: Colors.grey),
                     ),
                     const SizedBox(height: 32),
-                    
-                    
+
                     Container(
                       padding: const EdgeInsets.all(24),
                       decoration: BoxDecoration(
@@ -170,7 +173,10 @@ class _HomePageState extends State<HomePage> {
                           RichText(
                             text: const TextSpan(
                               text: AppConstants.orInviteFriends + ' ',
-                              style: TextStyle(fontSize: 14, color: Colors.grey),
+                              style: TextStyle(
+                                fontSize: 14,
+                                color: Colors.grey,
+                              ),
                               children: [
                                 TextSpan(
                                   text: AppConstants.freePremium,
@@ -191,7 +197,9 @@ class _HomePageState extends State<HomePage> {
                                   onPressed: () {},
                                   style: ElevatedButton.styleFrom(
                                     backgroundColor: AppTheme.primaryBlue,
-                                    padding: const EdgeInsets.symmetric(vertical: 14),
+                                    padding: const EdgeInsets.symmetric(
+                                      vertical: 14,
+                                    ),
                                     shape: RoundedRectangleBorder(
                                       borderRadius: BorderRadius.circular(12),
                                     ),
@@ -211,8 +219,12 @@ class _HomePageState extends State<HomePage> {
                                 child: OutlinedButton(
                                   onPressed: () {},
                                   style: OutlinedButton.styleFrom(
-                                    padding: const EdgeInsets.symmetric(vertical: 14),
-                                    side: BorderSide(color: AppTheme.primaryBlue),
+                                    padding: const EdgeInsets.symmetric(
+                                      vertical: 14,
+                                    ),
+                                    side: BorderSide(
+                                      color: AppTheme.primaryBlue,
+                                    ),
                                     shape: RoundedRectangleBorder(
                                       borderRadius: BorderRadius.circular(12),
                                     ),
@@ -232,10 +244,9 @@ class _HomePageState extends State<HomePage> {
                         ],
                       ),
                     ),
-                    
+
                     const SizedBox(height: 32),
-                    
-                    
+
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
@@ -262,25 +273,30 @@ class _HomePageState extends State<HomePage> {
                             ],
                           ),
                         ),
-                        Icon(Icons.arrow_forward_ios, size: 16, color: Colors.grey),
+                        Icon(
+                          Icons.arrow_forward_ios,
+                          size: 16,
+                          color: Colors.grey,
+                        ),
                       ],
                     ),
-                    
+
                     const SizedBox(height: 32),
-                    
-                    
+
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
                         const Text(
                           AppConstants.dontKnowPrompt,
-                          style: TextStyle(
-                            fontSize: 14,
-                            color: Colors.grey,
-                          ),
+                          style: TextStyle(fontSize: 14, color: Colors.grey),
                         ),
                         TextButton(
-                          onPressed: () {},
+                          onPressed: () {
+                            Navigator.pushNamed(
+                              context,
+                              AppConstants.promptListRoute,
+                            );
+                          },
                           child: const Text(
                             AppConstants.viewAll,
                             style: TextStyle(
@@ -292,10 +308,9 @@ class _HomePageState extends State<HomePage> {
                         ),
                       ],
                     ),
-                    
+
                     const SizedBox(height: 16),
-                    
-                    
+
                     _buildPromptCard('Phân tích Gains Profile'),
                     const SizedBox(height: 12),
                     _buildPromptCard('Câu hỏi mở về nhu cầu kinh doanh'),
@@ -303,8 +318,7 @@ class _HomePageState extends State<HomePage> {
                 ),
               ),
             ),
-            
-            
+
             Container(
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
@@ -320,9 +334,11 @@ class _HomePageState extends State<HomePage> {
               child: SafeArea(
                 child: Row(
                   children: [
-                    
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 8,
+                      ),
                       decoration: BoxDecoration(
                         color: AppTheme.primaryBlue.withOpacity(0.1),
                         borderRadius: BorderRadius.circular(20),
@@ -330,7 +346,11 @@ class _HomePageState extends State<HomePage> {
                       child: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          Icon(Icons.smart_toy, size: 18, color: AppTheme.primaryBlue),
+                          Icon(
+                            Icons.smart_toy,
+                            size: 18,
+                            color: AppTheme.primaryBlue,
+                          ),
                           const SizedBox(width: 6),
                           const Text(
                             '123',
@@ -341,54 +361,85 @@ class _HomePageState extends State<HomePage> {
                             ),
                           ),
                           const SizedBox(width: 4),
-                          Icon(Icons.keyboard_arrow_down, size: 18, color: AppTheme.primaryBlue),
+                          Icon(
+                            Icons.keyboard_arrow_down,
+                            size: 18,
+                            color: AppTheme.primaryBlue,
+                          ),
                         ],
                       ),
                     ),
                     const SizedBox(width: 12),
-                    
+
                     Container(
                       padding: const EdgeInsets.all(8),
                       decoration: BoxDecoration(
                         color: AppTheme.primaryBlue,
                         shape: BoxShape.circle,
                       ),
-                      child: const Icon(Icons.add, size: 18, color: Colors.white),
+                      child: const Icon(
+                        Icons.add,
+                        size: 18,
+                        color: Colors.white,
+                      ),
                     ),
                     const SizedBox(width: 12),
-                    
+
                     Expanded(
                       child: TextField(
                         controller: _messageController,
                         decoration: InputDecoration(
                           hintText: AppConstants.askMeAnything,
-                          hintStyle: TextStyle(fontSize: 14, color: Colors.grey[400]),
+                          hintStyle: TextStyle(
+                            fontSize: 14,
+                            color: Colors.grey[400],
+                          ),
                           border: InputBorder.none,
                           contentPadding: EdgeInsets.zero,
                         ),
                       ),
                     ),
-                    
+
                     Row(
                       children: [
                         IconButton(
-                          icon: Icon(Icons.code, size: 20, color: Colors.grey[600]),
+                          icon: Icon(
+                            Icons.code,
+                            size: 20,
+                            color: Colors.grey[600],
+                          ),
                           onPressed: () {},
                         ),
                         IconButton(
-                          icon: Icon(Icons.language, size: 20, color: Colors.grey[600]),
+                          icon: Icon(
+                            Icons.language,
+                            size: 20,
+                            color: Colors.grey[600],
+                          ),
                           onPressed: () {},
                         ),
                         IconButton(
-                          icon: Icon(Icons.lightbulb_outline, size: 20, color: Colors.grey[600]),
+                          icon: Icon(
+                            Icons.lightbulb_outline,
+                            size: 20,
+                            color: Colors.grey[600],
+                          ),
                           onPressed: () {},
                         ),
                         IconButton(
-                          icon: Icon(Icons.palette_outlined, size: 20, color: Colors.grey[600]),
+                          icon: Icon(
+                            Icons.palette_outlined,
+                            size: 20,
+                            color: Colors.grey[600],
+                          ),
                           onPressed: () {},
                         ),
                         IconButton(
-                          icon: Icon(Icons.table_chart_outlined, size: 20, color: Colors.grey[600]),
+                          icon: Icon(
+                            Icons.table_chart_outlined,
+                            size: 20,
+                            color: Colors.grey[600],
+                          ),
                           onPressed: () {},
                         ),
                       ],
@@ -405,7 +456,11 @@ class _HomePageState extends State<HomePage> {
         child: Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(Icons.local_fire_department, size: 18, color: AppTheme.primaryBlue),
+            Icon(
+              Icons.local_fire_department,
+              size: 18,
+              color: AppTheme.primaryBlue,
+            ),
             const SizedBox(width: 6),
             const Text(
               '50',
@@ -434,10 +489,7 @@ class _HomePageState extends State<HomePage> {
         children: [
           Text(
             text,
-            style: const TextStyle(
-              fontSize: 15,
-              color: AppTheme.darkBlue,
-            ),
+            style: const TextStyle(fontSize: 15, color: AppTheme.darkBlue),
           ),
           Icon(Icons.arrow_forward_ios, size: 14, color: Colors.grey),
         ],
