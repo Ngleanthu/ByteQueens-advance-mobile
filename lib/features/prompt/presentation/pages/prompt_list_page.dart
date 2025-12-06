@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../../../data/models/prompt.dart';
 import '../widgets/prompt_item.dart';
+import '../widgets/create_prompt_dialog.dart';
 
 class PromptListPage extends StatefulWidget {
   const PromptListPage({Key? key}) : super(key: key);
@@ -228,8 +229,11 @@ class _PromptListPageState extends State<PromptListPage> {
                 IconButton(
                   icon: const Icon(Icons.add, color: Colors.black),
                   onPressed: () {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('Add new prompt')),
+                    showDialog(
+                      context: context,
+                      builder: (BuildContext context) {
+                        return const CreatePromptDialog();
+                      },
                     );
                   },
                 ),
