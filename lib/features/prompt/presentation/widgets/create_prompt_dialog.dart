@@ -225,9 +225,21 @@ class CreatePromptDialog extends StatelessWidget {
                     final String content = contentController.text;
                     final String description = descriptionController.text;
 
-                    print('Title: $title');
-                    print('Content: $content');
-                    print('Description: $description');
+                    //Validate
+                    if (title.isEmpty || content.isEmpty) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text('Title and content are required'),
+                        ),
+                      );
+                      return;
+                    }
+                    showDialog(
+                      context: context,
+                      barrierDismissible: false,
+                      builder: (_) =>
+                          const Center(child: CircularProgressIndicator()),
+                    );
 
                     Navigator.of(context).pop();
                     ScaffoldMessenger.of(context).showSnackBar(
