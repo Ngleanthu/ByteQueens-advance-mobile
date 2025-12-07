@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../../../../data/models/prompt.dart';
 import '../widgets/prompt_item.dart';
 import '../widgets/create_prompt_dialog.dart';
+import '../widgets/category_chip.dart';
 import '../../../../services/prompt_service.dart';
 
 class PromptListPage extends StatefulWidget {
@@ -20,16 +21,9 @@ class _PromptListPageState extends State<PromptListPage> {
   final TextEditingController _searchController = TextEditingController();
   String _searchQuery = '';
   bool _filterFavoritesOnly = false;
-  bool _showPublicPrompts = true; // true = Public, false = My Prompts
+  bool _showPublicPrompts = true;
 
-  final List<String> _categories = [
-    'All',
-    'Marketing',
-    'Engineering',
-    'Support',
-    'General',
-  ];
-  String _selectedCategory = 'All';
+  String _selectedCategory = 'all';
 
   @override
   void initState() {
@@ -44,21 +38,19 @@ class _PromptListPageState extends State<PromptListPage> {
     });
 
     try {
-      // Xác định các tham số filter
       final bool? isPublic = _showPublicPrompts ? true : false;
-      final String? category = _selectedCategory == 'All'
+      final String? category = _selectedCategory == 'all'
           ? null
           : _selectedCategory;
-      final bool? isFavourite = _filterFavoritesOnly ? true : null;
 
-      // Gọi API với các filter
+      bool? isFavorite = _filterFavoritesOnly ? true : null;
+
       final prompts = await _service.getPrompts(
         isPublic: isPublic,
         category: category,
-        isFavourite: isFavourite,
-        limit: 100, // Tăng limit để load nhiều dữ liệu hơn
+        isFavorite: isFavorite,
+        limit: 100,
         offset: 0,
-        // token: 'your_token_here', // Uncomment và thêm token nếu cần
       );
 
       setState(() {
@@ -78,18 +70,23 @@ class _PromptListPageState extends State<PromptListPage> {
       return _prompts;
     }
 
-    // Client-side search filtering
     return _prompts.where((p) {
       final searchLower = _searchQuery.toLowerCase();
       return p.title.toLowerCase().contains(searchLower) ||
-          p.description!.toLowerCase().contains(searchLower) ||
+          (p.description?.toLowerCase().contains(searchLower) ?? false) ||
           p.content.toLowerCase().contains(searchLower);
     }).toList();
   }
 
   void _onFilterChanged() {
-    // Reload data từ server với filter mới
     _loadPrompts();
+  }
+
+  void _onCategorySelected(String category) {
+    setState(() {
+      _selectedCategory = category;
+    });
+    _onFilterChanged();
   }
 
   @override
@@ -103,6 +100,8 @@ class _PromptListPageState extends State<PromptListPage> {
     return Scaffold(
       backgroundColor: Colors.white,
       appBar: AppBar(
+        backgroundColor: Colors.white,
+        elevation: 0,
         title: Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
@@ -121,7 +120,6 @@ class _PromptListPageState extends State<PromptListPage> {
                         return const CreatePromptDialog();
                       },
                     );
-                    // Reload nếu tạo prompt thành công
                     if (result == true) {
                       _loadPrompts();
                     }
@@ -249,59 +247,41 @@ class _PromptListPageState extends State<PromptListPage> {
                       setState(() => _searchQuery = value);
                       // Search là client-side, không cần reload từ server
                     },
-                    decoration: const InputDecoration(
+                    decoration: InputDecoration(
                       hintText: 'Search prompts...',
-                      hintStyle: TextStyle(color: Colors.grey),
-                      prefixIcon: Icon(Icons.search, color: Colors.grey),
-                      contentPadding: EdgeInsets.symmetric(vertical: 12),
+                      hintStyle: TextStyle(color: Colors.grey[400]),
+                      prefixIcon: Icon(Icons.search, color: Colors.grey[400]),
+                      contentPadding: const EdgeInsets.symmetric(
+                        vertical: 12,
+                        horizontal: 16,
+                      ),
                       filled: true,
-                      fillColor: Color.fromARGB(255, 248, 248, 248),
-                      border: InputBorder.none,
+                      fillColor: const Color.fromARGB(255, 248, 248, 248),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: BorderSide.none,
+                      ),
                     ),
                   ),
                 ),
-                const SizedBox(width: 8),
-                IconButton(
-                  icon: const Icon(Icons.clear, color: Colors.grey),
-                  onPressed: () {
-                    _searchController.clear();
-                    setState(() => _searchQuery = '');
-                  },
-                ),
+                if (_searchQuery.isNotEmpty) ...[
+                  const SizedBox(width: 8),
+                  IconButton(
+                    icon: const Icon(Icons.clear, color: Colors.grey),
+                    onPressed: () {
+                      _searchController.clear();
+                      setState(() => _searchQuery = '');
+                    },
+                  ),
+                ],
               ],
             ),
             const SizedBox(height: 16),
 
-            // Category chips
-            SizedBox(
-              height: 40,
-              child: ListView.separated(
-                scrollDirection: Axis.horizontal,
-                itemCount: _categories.length,
-                separatorBuilder: (_, __) => const SizedBox(width: 8),
-                itemBuilder: (_, i) {
-                  return ChoiceChip(
-                    label: Text(
-                      _categories[i],
-                      style: TextStyle(
-                        color: _selectedCategory == _categories[i]
-                            ? Colors.white
-                            : Colors.black,
-                      ),
-                    ),
-                    selected: _selectedCategory == _categories[i],
-                    onSelected: (_) {
-                      setState(() => _selectedCategory = _categories[i]);
-                      _onFilterChanged();
-                    },
-                    backgroundColor: Colors.grey[100],
-                    selectedColor: Colors.blue,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(20),
-                    ),
-                  );
-                },
-              ),
+            // Category chips - Sử dụng widget mới
+            CategoryChipsWidget(
+              selectedCategory: _selectedCategory,
+              onCategorySelected: _onCategorySelected,
             ),
             const SizedBox(height: 16),
 
@@ -320,19 +300,30 @@ class _PromptListPageState extends State<PromptListPage> {
                             color: Colors.red[300],
                           ),
                           const SizedBox(height: 16),
-                          Text(
-                            _errorMessage!,
-                            style: TextStyle(
-                              fontSize: 14,
-                              color: Colors.grey[600],
+                          Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 32),
+                            child: Text(
+                              _errorMessage!,
+                              style: TextStyle(
+                                fontSize: 14,
+                                color: Colors.grey[600],
+                              ),
+                              textAlign: TextAlign.center,
                             ),
-                            textAlign: TextAlign.center,
                           ),
                           const SizedBox(height: 16),
                           ElevatedButton.icon(
                             onPressed: _loadPrompts,
                             icon: const Icon(Icons.refresh),
                             label: const Text('Retry'),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.blue,
+                              foregroundColor: Colors.white,
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 24,
+                                vertical: 12,
+                              ),
+                            ),
                           ),
                         ],
                       ),

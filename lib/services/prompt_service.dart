@@ -60,7 +60,7 @@ class PromptService {
   Future<List<Prompt>> getPrompts({
     bool? isPublic,
     String? category,
-    bool? isFavourite,
+    bool? isFavorite,
     int limit = 20,
     int offset = 0,
     String? token,
@@ -68,14 +68,14 @@ class PromptService {
     print("🔧 [Service] getPrompts()");
     print("│ isPublic: $isPublic");
     print("│ category: $category");
-    print("│ isFavourite: $isFavourite");
+    print("│ isFavorite: $isFavorite");
     print("│ limit: $limit, offset: $offset");
 
     try {
       final resp = await api.getPrompts(
         isPublic: isPublic,
         category: category,
-        isFavourite: isFavourite,
+        isFavorite: isFavorite,
         limit: limit,
         offset: offset,
         token: token,
