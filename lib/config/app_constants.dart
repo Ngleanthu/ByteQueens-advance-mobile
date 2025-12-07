@@ -2,6 +2,21 @@ class AppConstants {
   // App Info
   static const String appName = 'Jarvis';
 
+  // API Configuration
+  static const String apiBaseUrl = 'https://auth-api.dev.jarvis.cx/api/v1';
+  static const String signUpEndpoint = '/auth/password/sign-up';
+  static const String signInEndpoint = '/auth/password/sign-in';
+  static const String refreshTokenEndpoint = '/auth/sessions/current/refresh';
+  static const String logoutEndpoint = '/auth/sessions/current';
+  static const String verificationCallbackUrl =
+      'https://auth.dev.jarvis.cx/handler/email-verification?after_auth_return_to=%2Fauth%2Fsignin%3Fclient_id%3Djarvis_chat%26redirect%3Dhttps%253A%252F%252Fchat.dev.jarvis.cx%252Fauth%252Foauth%252Fsuccess';
+
+  // Stack Auth API Keys
+  static const String stackPublishableClientKey =
+      'pck_tqsy29b64a585km2g4wnpc57ypjprzzdch8xzpq0xhayr';
+  static const String stackProjectId = 'a914f06b-5e46-4966-8693-80e4b9f4f409';
+  static const String stackAccessType = 'client';
+
   // Routes - Splash
   static const String splashRoute = '/';
 

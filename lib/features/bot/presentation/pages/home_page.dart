@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:bytequeens_adm/config/theme.dart';
 import 'package:bytequeens_adm/config/app_constants.dart';
+import 'package:bytequeens_adm/services/auth_service.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({Key? key}) : super(key: key);
@@ -94,13 +95,41 @@ class _HomePageState extends State<HomePage> {
               child: const Text(AppConstants.cancel),
             ),
             TextButton(
-              onPressed: () {
+              onPressed: () async {
                 Navigator.pop(context);
-                Navigator.pushNamedAndRemoveUntil(
-                  context,
-                  AppConstants.signInRoute,
-                  (route) => false,
+
+                // Hiển thị loading
+                showDialog(
+                  context: context,
+                  barrierDismissible: false,
+                  builder: (context) =>
+                      const Center(child: CircularProgressIndicator()),
                 );
+
+                // Gọi API logout
+                final result = await AuthService().logout();
+
+                if (mounted) {
+                  // Đóng loading dialog
+                  Navigator.pop(context);
+
+                  // Hiển thị kết quả
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text(result.message),
+                      backgroundColor: result.success
+                          ? Colors.green
+                          : Colors.red,
+                    ),
+                  );
+
+                  // Chuyển về trang sign in
+                  Navigator.pushNamedAndRemoveUntil(
+                    context,
+                    AppConstants.signInRoute,
+                    (route) => false,
+                  );
+                }
               },
               style: TextButton.styleFrom(foregroundColor: Colors.red),
               child: const Text(AppConstants.logout),

@@ -29,6 +29,7 @@ environment:
 # versions available, run `flutter pub outdated`.
 dependencies:
   dio: ^5.0.0
+  http: ^1.2.0
   flutter_secure_storage: ^8.0.0
   flutter:
     sdk: flutter
