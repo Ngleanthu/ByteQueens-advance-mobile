@@ -16,7 +16,7 @@ class _EmailLoginPageState extends State<EmailLoginPage> {
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   final _authService = AuthService();
-  
+
   bool _obscurePassword = true;
   bool _isLoading = false;
 
@@ -54,10 +54,9 @@ class _EmailLoginPageState extends State<EmailLoginPage> {
             );
 
             // Navigate to home page
-            Navigator.of(context).pushNamedAndRemoveUntil(
-              AppConstants.homeRoute,
-              (route) => false,
-            );
+            Navigator.of(
+              context,
+            ).pushNamedAndRemoveUntil(AppConstants.homeRoute, (route) => false);
           } else {
             // Show error
             ScaffoldMessenger.of(context).showSnackBar(
@@ -108,9 +107,7 @@ class _EmailLoginPageState extends State<EmailLoginPage> {
       body: Container(
         width: double.infinity,
         height: double.infinity,
-        decoration: const BoxDecoration(
-          gradient: AppTheme.backgroundGradient,
-        ),
+        decoration: const BoxDecoration(gradient: AppTheme.backgroundGradient),
         child: SafeArea(
           child: SingleChildScrollView(
             padding: const EdgeInsets.all(24.0),
@@ -120,17 +117,12 @@ class _EmailLoginPageState extends State<EmailLoginPage> {
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
                   const SizedBox(height: 20),
-                  
+
                   // Logo nhỏ ở trên
-                  const Center(
-                    child: JarvisLogo(
-                      size: 50,
-                      fontSize: 28,
-                    ),
-                  ),
-                  
+                  const Center(child: JarvisLogo(size: 50, fontSize: 28)),
+
                   const SizedBox(height: 40),
-                  
+
                   // Container chứa form
                   Container(
                     padding: const EdgeInsets.all(24),
@@ -170,15 +162,19 @@ class _EmailLoginPageState extends State<EmailLoginPage> {
                             if (value == null || value.isEmpty) {
                               return 'Please enter your email';
                             }
-                            if (!value.contains('@')) {
+                            // Email regex validation
+                            final emailRegex = RegExp(
+                              r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$',
+                            );
+                            if (!emailRegex.hasMatch(value)) {
                               return 'Please enter a valid email';
                             }
                             return null;
                           },
                         ),
-                        
+
                         const SizedBox(height: 24),
-                        
+
                         // Password Field
                         Text(
                           AppConstants.passwordLabel,
@@ -204,7 +200,9 @@ class _EmailLoginPageState extends State<EmailLoginPage> {
                                 _obscurePassword
                                     ? Icons.visibility_outlined
                                     : Icons.visibility_off_outlined,
-                                color: AppTheme.lightText.withValues(alpha: 0.5),
+                                color: AppTheme.lightText.withValues(
+                                  alpha: 0.5,
+                                ),
                               ),
                               onPressed: () {
                                 setState(() {
@@ -217,15 +215,15 @@ class _EmailLoginPageState extends State<EmailLoginPage> {
                             if (value == null || value.isEmpty) {
                               return 'Please enter your password';
                             }
-                            if (value.length < 6) {
-                              return 'Password must be at least 6 characters';
+                            if (value.length < 8) {
+                              return 'Password must be at least 8 characters';
                             }
                             return null;
                           },
                         ),
-                        
+
                         const SizedBox(height: 12),
-                        
+
                         // Forgot Password
                         Align(
                           alignment: Alignment.centerRight,
@@ -245,9 +243,9 @@ class _EmailLoginPageState extends State<EmailLoginPage> {
                             ),
                           ),
                         ),
-                        
+
                         const SizedBox(height: 24),
-                        
+
                         // Login Button
                         SizedBox(
                           height: 56,
@@ -260,7 +258,8 @@ class _EmailLoginPageState extends State<EmailLoginPage> {
                                 borderRadius: BorderRadius.circular(12),
                               ),
                               elevation: 0,
-                              disabledBackgroundColor: AppTheme.primaryBlue.withValues(alpha: 0.5),
+                              disabledBackgroundColor: AppTheme.primaryBlue
+                                  .withValues(alpha: 0.5),
                             ),
                             child: _isLoading
                                 ? const SizedBox(
@@ -280,37 +279,45 @@ class _EmailLoginPageState extends State<EmailLoginPage> {
                                   ),
                           ),
                         ),
-                        
+
                         const SizedBox(height: 20),
-                        
+
                         // Divider
                         Row(
                           children: [
                             Expanded(
                               child: Divider(
-                                color: AppTheme.mediumBlue.withValues(alpha: 0.3),
+                                color: AppTheme.mediumBlue.withValues(
+                                  alpha: 0.3,
+                                ),
                               ),
                             ),
                             Padding(
-                              padding: const EdgeInsets.symmetric(horizontal: 16),
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 16,
+                              ),
                               child: Text(
                                 'OR',
                                 style: TextStyle(
-                                  color: AppTheme.lightText.withValues(alpha: 0.6),
+                                  color: AppTheme.lightText.withValues(
+                                    alpha: 0.6,
+                                  ),
                                   fontSize: 12,
                                 ),
                               ),
                             ),
                             Expanded(
                               child: Divider(
-                                color: AppTheme.mediumBlue.withValues(alpha: 0.3),
+                                color: AppTheme.mediumBlue.withValues(
+                                  alpha: 0.3,
+                                ),
                               ),
                             ),
                           ],
                         ),
-                        
+
                         const SizedBox(height: 20),
-                        
+
                         // Create Account Button
                         SizedBox(
                           height: 56,
@@ -324,7 +331,9 @@ class _EmailLoginPageState extends State<EmailLoginPage> {
                             style: OutlinedButton.styleFrom(
                               foregroundColor: Colors.white,
                               side: BorderSide(
-                                color: AppTheme.mediumBlue.withValues(alpha: 0.5),
+                                color: AppTheme.mediumBlue.withValues(
+                                  alpha: 0.5,
+                                ),
                               ),
                               shape: RoundedRectangleBorder(
                                 borderRadius: BorderRadius.circular(12),
@@ -342,9 +351,9 @@ class _EmailLoginPageState extends State<EmailLoginPage> {
                       ],
                     ),
                   ),
-                  
+
                   const SizedBox(height: 30),
-                  
+
                   // Terms of Service
                   Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 16),

@@ -15,7 +15,7 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
   final _formKey = GlobalKey<FormState>();
   final _emailController = TextEditingController();
   final _authService = AuthService();
-  
+
   bool _isLoading = false;
 
   @override
@@ -108,9 +108,7 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
       body: Container(
         width: double.infinity,
         height: double.infinity,
-        decoration: const BoxDecoration(
-          gradient: AppTheme.backgroundGradient,
-        ),
+        decoration: const BoxDecoration(gradient: AppTheme.backgroundGradient),
         child: SafeArea(
           child: SingleChildScrollView(
             padding: const EdgeInsets.all(24.0),
@@ -120,17 +118,12 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
                   const SizedBox(height: 40),
-                  
+
                   // Logo
-                  const Center(
-                    child: JarvisLogo(
-                      size: 50,
-                      fontSize: 28,
-                    ),
-                  ),
-                  
+                  const Center(child: JarvisLogo(size: 50, fontSize: 28)),
+
                   const SizedBox(height: 24),
-                  
+
                   // Subtitle
                   Text(
                     AppConstants.forgotPasswordPrompt,
@@ -140,9 +133,9 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
                       color: AppTheme.lightText.withValues(alpha: 0.8),
                     ),
                   ),
-                  
+
                   const SizedBox(height: 40),
-                  
+
                   // Form Container
                   Container(
                     padding: const EdgeInsets.all(24),
@@ -171,15 +164,17 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
                                 'We\'ll send a verification code to your email',
                                 style: TextStyle(
                                   fontSize: 13,
-                                  color: AppTheme.lightText.withValues(alpha: 0.7),
+                                  color: AppTheme.lightText.withValues(
+                                    alpha: 0.7,
+                                  ),
                                 ),
                               ),
                             ),
                           ],
                         ),
-                        
+
                         const SizedBox(height: 24),
-                        
+
                         // Email Field
                         Text(
                           AppConstants.emailLabel,
@@ -205,15 +200,19 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
                             if (value == null || value.isEmpty) {
                               return AppConstants.emailRequired;
                             }
-                            if (!value.contains('@')) {
+                            // Email regex validation
+                            final emailRegex = RegExp(
+                              r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$',
+                            );
+                            if (!emailRegex.hasMatch(value)) {
                               return AppConstants.emailInvalid;
                             }
                             return null;
                           },
                         ),
-                        
+
                         const SizedBox(height: 32),
-                        
+
                         // Send Code Button
                         SizedBox(
                           height: 56,
@@ -226,7 +225,8 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
                                 borderRadius: BorderRadius.circular(12),
                               ),
                               elevation: 0,
-                              disabledBackgroundColor: AppTheme.primaryBlue.withValues(alpha: 0.5),
+                              disabledBackgroundColor: AppTheme.primaryBlue
+                                  .withValues(alpha: 0.5),
                             ),
                             child: _isLoading
                                 ? const SizedBox(
@@ -246,9 +246,9 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
                                   ),
                           ),
                         ),
-                        
+
                         const SizedBox(height: 20),
-                        
+
                         // Back to Login
                         Center(
                           child: TextButton(
@@ -271,9 +271,9 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
                       ],
                     ),
                   ),
-                  
+
                   const SizedBox(height: 40),
-                  
+
                   // Help text
                   Container(
                     padding: const EdgeInsets.all(16),

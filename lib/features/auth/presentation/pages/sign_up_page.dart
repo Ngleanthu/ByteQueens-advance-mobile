@@ -17,7 +17,7 @@ class _SignUpPageState extends State<SignUpPage> {
   final _passwordController = TextEditingController();
   final _confirmPasswordController = TextEditingController();
   final _authService = AuthService();
-  
+
   bool _obscurePassword = true;
   bool _obscureConfirmPassword = true;
   bool _isLoading = false;
@@ -125,9 +125,7 @@ class _SignUpPageState extends State<SignUpPage> {
       body: Container(
         width: double.infinity,
         height: double.infinity,
-        decoration: const BoxDecoration(
-          gradient: AppTheme.backgroundGradient,
-        ),
+        decoration: const BoxDecoration(gradient: AppTheme.backgroundGradient),
         child: SafeArea(
           child: SingleChildScrollView(
             padding: const EdgeInsets.all(24.0),
@@ -137,17 +135,12 @@ class _SignUpPageState extends State<SignUpPage> {
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
                   const SizedBox(height: 20),
-                  
+
                   // Logo
-                  const Center(
-                    child: JarvisLogo(
-                      size: 50,
-                      fontSize: 28,
-                    ),
-                  ),
-                  
+                  const Center(child: JarvisLogo(size: 50, fontSize: 28)),
+
                   const SizedBox(height: 16),
-                  
+
                   // Subtitle
                   Text(
                     AppConstants.signUpPrompt,
@@ -157,9 +150,9 @@ class _SignUpPageState extends State<SignUpPage> {
                       color: AppTheme.lightText.withValues(alpha: 0.8),
                     ),
                   ),
-                  
+
                   const SizedBox(height: 32),
-                  
+
                   // Form Container
                   Container(
                     padding: const EdgeInsets.all(24),
@@ -199,15 +192,19 @@ class _SignUpPageState extends State<SignUpPage> {
                             if (value == null || value.isEmpty) {
                               return AppConstants.emailRequired;
                             }
-                            if (!value.contains('@')) {
+                            // Email regex validation
+                            final emailRegex = RegExp(
+                              r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$',
+                            );
+                            if (!emailRegex.hasMatch(value)) {
                               return AppConstants.emailInvalid;
                             }
                             return null;
                           },
                         ),
-                        
+
                         const SizedBox(height: 20),
-                        
+
                         // Password Field
                         Text(
                           AppConstants.passwordLabel,
@@ -233,7 +230,9 @@ class _SignUpPageState extends State<SignUpPage> {
                                 _obscurePassword
                                     ? Icons.visibility_outlined
                                     : Icons.visibility_off_outlined,
-                                color: AppTheme.lightText.withValues(alpha: 0.5),
+                                color: AppTheme.lightText.withValues(
+                                  alpha: 0.5,
+                                ),
                               ),
                               onPressed: () {
                                 setState(() {
@@ -246,15 +245,15 @@ class _SignUpPageState extends State<SignUpPage> {
                             if (value == null || value.isEmpty) {
                               return AppConstants.passwordRequired;
                             }
-                            if (value.length < 6) {
-                              return AppConstants.passwordTooShort;
+                            if (value.length < 8) {
+                              return 'Password must be at least 8 characters';
                             }
                             return null;
                           },
                         ),
-                        
+
                         const SizedBox(height: 20),
-                        
+
                         // Confirm Password Field
                         Text(
                           AppConstants.confirmPasswordLabel,
@@ -280,11 +279,14 @@ class _SignUpPageState extends State<SignUpPage> {
                                 _obscureConfirmPassword
                                     ? Icons.visibility_outlined
                                     : Icons.visibility_off_outlined,
-                                color: AppTheme.lightText.withValues(alpha: 0.5),
+                                color: AppTheme.lightText.withValues(
+                                  alpha: 0.5,
+                                ),
                               ),
                               onPressed: () {
                                 setState(() {
-                                  _obscureConfirmPassword = !_obscureConfirmPassword;
+                                  _obscureConfirmPassword =
+                                      !_obscureConfirmPassword;
                                 });
                               },
                             ),
@@ -299,9 +301,9 @@ class _SignUpPageState extends State<SignUpPage> {
                             return null;
                           },
                         ),
-                        
+
                         const SizedBox(height: 32),
-                        
+
                         // Sign Up Button
                         SizedBox(
                           height: 56,
@@ -314,7 +316,8 @@ class _SignUpPageState extends State<SignUpPage> {
                                 borderRadius: BorderRadius.circular(12),
                               ),
                               elevation: 0,
-                              disabledBackgroundColor: AppTheme.primaryBlue.withValues(alpha: 0.5),
+                              disabledBackgroundColor: AppTheme.primaryBlue
+                                  .withValues(alpha: 0.5),
                             ),
                             child: _isLoading
                                 ? const SizedBox(
@@ -334,9 +337,9 @@ class _SignUpPageState extends State<SignUpPage> {
                                   ),
                           ),
                         ),
-                        
+
                         const SizedBox(height: 20),
-                        
+
                         // Already have account
                         Row(
                           mainAxisAlignment: MainAxisAlignment.center,
@@ -345,7 +348,9 @@ class _SignUpPageState extends State<SignUpPage> {
                               AppConstants.alreadyHaveAccount,
                               style: TextStyle(
                                 fontSize: 14,
-                                color: AppTheme.lightText.withValues(alpha: 0.8),
+                                color: AppTheme.lightText.withValues(
+                                  alpha: 0.8,
+                                ),
                               ),
                             ),
                             const SizedBox(width: 6),
@@ -370,9 +375,9 @@ class _SignUpPageState extends State<SignUpPage> {
                       ],
                     ),
                   ),
-                  
+
                   const SizedBox(height: 30),
-                  
+
                   // Terms of Service
                   Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 16),
