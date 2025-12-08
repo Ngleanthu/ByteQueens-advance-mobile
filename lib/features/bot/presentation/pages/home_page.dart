@@ -2,6 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:bytequeens_adm/config/theme.dart';
 import 'package:bytequeens_adm/config/app_constants.dart';
 import 'package:bytequeens_adm/services/auth_service.dart';
+import 'package:bytequeens_adm/services/bot_service.dart';
+import 'package:bytequeens_adm/data/models/bot.dart';
+import 'package:bytequeens_adm/app.dart';
+import 'package:bytequeens_adm/features/bot/presentation/widgets/chat_input_section.dart';
+import 'package:bytequeens_adm/features/bot/presentation/widgets/left_menu_drawer.dart';
+import 'package:bytequeens_adm/features/bot/presentation/pages/chat_page.dart';
+import 'package:bytequeens_adm/features/bot/presentation/pages/chat_history_page.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({Key? key}) : super(key: key);
@@ -12,6 +19,35 @@ class HomePage extends StatefulWidget {
 
 class _HomePageState extends State<HomePage> {
   final _messageController = TextEditingController();
+  final _botService = BotService();
+  String _selectedModel = 'GPT-4o Mini';
+  String _selectedModelId = 'gpt-4o-mini';
+  List<Bot> _userBots = [];
+  bool _isMenuExpanded = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadUserBots();
+  }
+
+  Future<void> _loadUserBots() async {
+    try {
+      final bots = await _botService.getAllBots();
+      setState(() {
+        _userBots = bots;
+      });
+    } catch (e) {
+      // Handle error silently or show a snackbar
+    }
+  }
+
+  void _handleModelChange(String modelId, String modelName) {
+    setState(() {
+      _selectedModelId = modelId;
+      _selectedModel = modelName;
+    });
+  }
 
   @override
   void dispose() {
@@ -33,6 +69,17 @@ class _HomePageState extends State<HomePage> {
             mainAxisSize: MainAxisSize.min,
             children: [
               ListTile(
+                leading: const Icon(Icons.chat, color: Colors.white),
+                title: const Text(
+                  'Chat',
+                  style: TextStyle(color: Colors.white),
+                ),
+                onTap: () {
+                  Navigator.pop(context);
+                  // Already on home, so just close menu
+                },
+              ),
+              ListTile(
                 leading: const Icon(Icons.smart_toy, color: Colors.white),
                 title: const Text(
                   AppConstants.myBots,
@@ -52,6 +99,17 @@ class _HomePageState extends State<HomePage> {
                 onTap: () {
                   Navigator.pop(context);
                   Navigator.pushNamed(context, AppConstants.groupsListRoute);
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.brightness_6, color: Colors.white),
+                title: const Text(
+                  'Theme Mode',
+                  style: TextStyle(color: Colors.white),
+                ),
+                onTap: () {
+                  Navigator.pop(context);
+                  _showThemeModeDialog();
                 },
               ),
               ListTile(
@@ -79,6 +137,46 @@ class _HomePageState extends State<HomePage> {
           ),
         ),
       ),
+    );
+  }
+
+  void _showThemeModeDialog() {
+    showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: const Text('Select Theme Mode'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              ListTile(
+                leading: const Icon(Icons.brightness_auto),
+                title: const Text('System Default'),
+                onTap: () {
+                  MyApp.of(context)?.setThemeMode(ThemeMode.system);
+                  Navigator.pop(context);
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.light_mode),
+                title: const Text('Light Mode'),
+                onTap: () {
+                  MyApp.of(context)?.setThemeMode(ThemeMode.light);
+                  Navigator.pop(context);
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.dark_mode),
+                title: const Text('Dark Mode'),
+                onTap: () {
+                  MyApp.of(context)?.setThemeMode(ThemeMode.dark);
+                  Navigator.pop(context);
+                },
+              ),
+            ],
+          ),
+        );
+      },
     );
   }
 
@@ -142,385 +240,394 @@ class _HomePageState extends State<HomePage> {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final screenWidth = MediaQuery.of(context).size.width;
+    final isWeb = screenWidth > 800;
+
     return Scaffold(
-      backgroundColor: Colors.white,
-      appBar: AppBar(
-        backgroundColor: Colors.white,
-        elevation: 0,
-        automaticallyImplyLeading: false,
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.more_vert, color: AppTheme.darkBlue),
-            onPressed: _openMenu,
+      backgroundColor: isDark ? AppTheme.darkBlue : Colors.white,
+      body: Row(
+        children: [
+          // Left menu for web
+          if (isWeb)
+            LeftMenuDrawer(
+              isExpanded: _isMenuExpanded,
+              onToggle: () {
+                setState(() {
+                  _isMenuExpanded = !_isMenuExpanded;
+                });
+              },
+            ),
+
+          // Main content
+          Expanded(
+            child: Column(
+              children: [
+                // AppBar only for mobile
+                if (!isWeb)
+                  AppBar(
+                    backgroundColor: isDark ? AppTheme.navyBlue : Colors.white,
+                    elevation: 0,
+                    automaticallyImplyLeading: false,
+                    actions: [
+                      IconButton(
+                        icon: Icon(
+                          Icons.menu,
+                          color: isDark ? Colors.white : AppTheme.darkBlue,
+                        ),
+                        onPressed: _openMenu,
+                      ),
+                    ],
+                  ),
+
+                // Content with max width constraint
+                Expanded(
+                  child: Center(
+                    child: Container(
+                      constraints: const BoxConstraints(maxWidth: 1200),
+                      child: SafeArea(
+                        child: Column(
+                          children: [
+                            Expanded(
+                              child: SingleChildScrollView(
+                                padding: EdgeInsets.all(isWeb ? 48 : 24),
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    const Text(
+                                      '👋',
+                                      style: TextStyle(fontSize: 32),
+                                    ),
+                                    const SizedBox(height: 16),
+                                    Text(
+                                      AppConstants.greeting,
+                                      style: TextStyle(
+                                        fontSize: 28,
+                                        fontWeight: FontWeight.bold,
+                                        color: isDark
+                                            ? Colors.white
+                                            : AppTheme.darkBlue,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 8),
+                                    Text(
+                                      AppConstants.personalAssistant,
+                                      style: TextStyle(
+                                        fontSize: 16,
+                                        color: isDark
+                                            ? Colors.grey[400]
+                                            : Colors.grey[600],
+                                      ),
+                                    ),
+                                    const SizedBox(height: 32),
+
+                                    Container(
+                                      padding: const EdgeInsets.all(24),
+                                      decoration: BoxDecoration(
+                                        color: isDark
+                                            ? AppTheme.navyBlue
+                                            : Colors.grey[100],
+                                        borderRadius: BorderRadius.circular(16),
+                                      ),
+                                      child: Column(
+                                        children: [
+                                          Text(
+                                            AppConstants.upgradePro,
+                                            textAlign: TextAlign.center,
+                                            style: TextStyle(
+                                              fontSize: 16,
+                                              fontWeight: FontWeight.w600,
+                                              color: isDark
+                                                  ? Colors.white
+                                                  : AppTheme.darkBlue,
+                                            ),
+                                          ),
+                                          const SizedBox(height: 12),
+                                          RichText(
+                                            text: TextSpan(
+                                              text:
+                                                  AppConstants.orInviteFriends +
+                                                  ' ',
+                                              style: TextStyle(
+                                                fontSize: 14,
+                                                color: isDark
+                                                    ? Colors.grey[400]
+                                                    : Colors.grey[600],
+                                              ),
+                                              children: [
+                                                TextSpan(
+                                                  text:
+                                                      AppConstants.freePremium,
+                                                  style: TextStyle(
+                                                    color: AppTheme.primaryBlue,
+                                                    fontWeight: FontWeight.w600,
+                                                  ),
+                                                ),
+                                                TextSpan(text: '.'),
+                                              ],
+                                            ),
+                                          ),
+                                          const SizedBox(height: 20),
+                                          Row(
+                                            children: [
+                                              Expanded(
+                                                child: ElevatedButton(
+                                                  onPressed: () {},
+                                                  style: ElevatedButton.styleFrom(
+                                                    backgroundColor:
+                                                        AppTheme.primaryBlue,
+                                                    padding:
+                                                        const EdgeInsets.symmetric(
+                                                          vertical: 14,
+                                                        ),
+                                                    shape: RoundedRectangleBorder(
+                                                      borderRadius:
+                                                          BorderRadius.circular(
+                                                            12,
+                                                          ),
+                                                    ),
+                                                  ),
+                                                  child: const Text(
+                                                    AppConstants.startFreeTrial,
+                                                    style: TextStyle(
+                                                      fontSize: 14,
+                                                      fontWeight:
+                                                          FontWeight.w600,
+                                                      color: Colors.white,
+                                                    ),
+                                                  ),
+                                                ),
+                                              ),
+                                              const SizedBox(width: 12),
+                                              Expanded(
+                                                child: OutlinedButton(
+                                                  onPressed: () {},
+                                                  style: OutlinedButton.styleFrom(
+                                                    padding:
+                                                        const EdgeInsets.symmetric(
+                                                          vertical: 14,
+                                                        ),
+                                                    side: BorderSide(
+                                                      color:
+                                                          AppTheme.primaryBlue,
+                                                    ),
+                                                    shape: RoundedRectangleBorder(
+                                                      borderRadius:
+                                                          BorderRadius.circular(
+                                                            12,
+                                                          ),
+                                                    ),
+                                                  ),
+                                                  child: const Text(
+                                                    AppConstants.inviteFriends,
+                                                    style: TextStyle(
+                                                      fontSize: 14,
+                                                      fontWeight:
+                                                          FontWeight.w600,
+                                                      color:
+                                                          AppTheme.primaryBlue,
+                                                    ),
+                                                  ),
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+
+                                    const SizedBox(height: 32),
+
+                                    InkWell(
+                                      onTap: () {
+                                        // TODO: Navigate to download page
+                                      },
+                                      borderRadius: BorderRadius.circular(8),
+                                      child: Padding(
+                                        padding: const EdgeInsets.symmetric(
+                                          vertical: 8,
+                                        ),
+                                        child: Row(
+                                          children: [
+                                            const Expanded(
+                                              child: Column(
+                                                crossAxisAlignment:
+                                                    CrossAxisAlignment.start,
+                                                children: [
+                                                  Text(
+                                                    AppConstants
+                                                        .useOnAllPlatforms,
+                                                    style: TextStyle(
+                                                      fontSize: 16,
+                                                      fontWeight:
+                                                          FontWeight.w600,
+                                                      color: AppTheme.darkBlue,
+                                                    ),
+                                                  ),
+                                                  SizedBox(height: 4),
+                                                  Text(
+                                                    AppConstants.downloadDesc,
+                                                    style: TextStyle(
+                                                      fontSize: 13,
+                                                      color: Colors.grey,
+                                                    ),
+                                                  ),
+                                                ],
+                                              ),
+                                            ),
+                                            const Icon(
+                                              Icons.arrow_forward_ios,
+                                              size: 16,
+                                              color: Colors.grey,
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                    ),
+
+                                    const SizedBox(height: 32),
+
+                                    Row(
+                                      children: [
+                                        Expanded(
+                                          child: Text(
+                                            AppConstants.dontKnowPrompt,
+                                            style: TextStyle(
+                                              fontSize: 14,
+                                              color: isDark
+                                                  ? Colors.grey[400]
+                                                  : Colors.grey[600],
+                                            ),
+                                          ),
+                                        ),
+                                        TextButton(
+                                          onPressed: () {
+                                            Navigator.pushNamed(
+                                              context,
+                                              AppConstants.promptListRoute,
+                                            );
+                                          },
+                                          style: TextButton.styleFrom(
+                                            foregroundColor:
+                                                AppTheme.primaryBlue,
+                                          ),
+                                          child: Text(
+                                            AppConstants.viewAll,
+                                            style: TextStyle(
+                                              fontSize: 14,
+                                              color: AppTheme.primaryBlue,
+                                              fontWeight: FontWeight.w600,
+                                              inherit: true,
+                                            ),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+
+                                    const SizedBox(height: 16),
+
+                                    _buildPromptCard('Phân tích Gains Profile'),
+                                    const SizedBox(height: 12),
+                                    _buildPromptCard(
+                                      'Câu hỏi mở về nhu cầu kinh doanh',
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+
+                            // New Chat Input Section Widget
+                            ChatInputSection(
+                              messageController: _messageController,
+                              selectedModel: _selectedModel,
+                              freeMessagesRemaining: 45,
+                              userBots: _userBots,
+                              onModelChanged: _handleModelChange,
+                              onSendMessage: () {
+                                // Handle send message
+                                if (_messageController.text.trim().isNotEmpty) {
+                                  final message = _messageController.text
+                                      .trim();
+                                  _messageController.clear();
+
+                                  // Navigate to chat page
+                                  Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (context) => ChatPage(
+                                        initialMessage: message,
+                                        modelId: _selectedModelId,
+                                        modelName: _selectedModel,
+                                      ),
+                                    ),
+                                  );
+                                }
+                              },
+                              onCreateBot: () {
+                                Navigator.pushNamed(
+                                  context,
+                                  AppConstants.botsListRoute,
+                                );
+                              },
+                              onHistoryTap: () {
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (context) =>
+                                        const ChatHistoryPage(),
+                                  ),
+                                );
+                              },
+                              onNewChat: () {
+                                // Clear message input for new chat
+                                _messageController.clear();
+                              },
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
           ),
         ],
-      ),
-      body: SafeArea(
-        child: Column(
-          children: [
-            Expanded(
-              child: SingleChildScrollView(
-                padding: const EdgeInsets.all(24),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text('👋', style: TextStyle(fontSize: 32)),
-                    const SizedBox(height: 16),
-                    const Text(
-                      AppConstants.greeting,
-                      style: TextStyle(
-                        fontSize: 28,
-                        fontWeight: FontWeight.bold,
-                        color: AppTheme.darkBlue,
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    const Text(
-                      AppConstants.personalAssistant,
-                      style: TextStyle(fontSize: 16, color: Colors.grey),
-                    ),
-                    const SizedBox(height: 32),
-
-                    Container(
-                      padding: const EdgeInsets.all(24),
-                      decoration: BoxDecoration(
-                        color: Colors.grey[100],
-                        borderRadius: BorderRadius.circular(16),
-                      ),
-                      child: Column(
-                        children: [
-                          const Text(
-                            AppConstants.upgradePro,
-                            textAlign: TextAlign.center,
-                            style: TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.w600,
-                              color: AppTheme.darkBlue,
-                            ),
-                          ),
-                          const SizedBox(height: 12),
-                          RichText(
-                            text: const TextSpan(
-                              text: AppConstants.orInviteFriends + ' ',
-                              style: TextStyle(
-                                fontSize: 14,
-                                color: Colors.grey,
-                              ),
-                              children: [
-                                TextSpan(
-                                  text: AppConstants.freePremium,
-                                  style: TextStyle(
-                                    color: AppTheme.primaryBlue,
-                                    fontWeight: FontWeight.w600,
-                                  ),
-                                ),
-                                TextSpan(text: '.'),
-                              ],
-                            ),
-                          ),
-                          const SizedBox(height: 20),
-                          Row(
-                            children: [
-                              Expanded(
-                                child: ElevatedButton(
-                                  onPressed: () {},
-                                  style: ElevatedButton.styleFrom(
-                                    backgroundColor: AppTheme.primaryBlue,
-                                    padding: const EdgeInsets.symmetric(
-                                      vertical: 14,
-                                    ),
-                                    shape: RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.circular(12),
-                                    ),
-                                  ),
-                                  child: const Text(
-                                    AppConstants.startFreeTrial,
-                                    style: TextStyle(
-                                      fontSize: 14,
-                                      fontWeight: FontWeight.w600,
-                                      color: Colors.white,
-                                    ),
-                                  ),
-                                ),
-                              ),
-                              const SizedBox(width: 12),
-                              Expanded(
-                                child: OutlinedButton(
-                                  onPressed: () {},
-                                  style: OutlinedButton.styleFrom(
-                                    padding: const EdgeInsets.symmetric(
-                                      vertical: 14,
-                                    ),
-                                    side: BorderSide(
-                                      color: AppTheme.primaryBlue,
-                                    ),
-                                    shape: RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.circular(12),
-                                    ),
-                                  ),
-                                  child: const Text(
-                                    AppConstants.inviteFriends,
-                                    style: TextStyle(
-                                      fontSize: 14,
-                                      fontWeight: FontWeight.w600,
-                                      color: AppTheme.primaryBlue,
-                                    ),
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ],
-                      ),
-                    ),
-
-                    const SizedBox(height: 32),
-
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        const Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                AppConstants.useOnAllPlatforms,
-                                style: TextStyle(
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.w600,
-                                  color: AppTheme.darkBlue,
-                                ),
-                              ),
-                              SizedBox(height: 4),
-                              Text(
-                                AppConstants.downloadDesc,
-                                style: TextStyle(
-                                  fontSize: 13,
-                                  color: Colors.grey,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                        Icon(
-                          Icons.arrow_forward_ios,
-                          size: 16,
-                          color: Colors.grey,
-                        ),
-                      ],
-                    ),
-
-                    const SizedBox(height: 32),
-
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        const Text(
-                          AppConstants.dontKnowPrompt,
-                          style: TextStyle(fontSize: 14, color: Colors.grey),
-                        ),
-                        TextButton(
-                          onPressed: () {
-                            Navigator.pushNamed(
-                              context,
-                              AppConstants.promptListRoute,
-                            );
-                          },
-                          child: const Text(
-                            AppConstants.viewAll,
-                            style: TextStyle(
-                              fontSize: 14,
-                              color: AppTheme.primaryBlue,
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-
-                    const SizedBox(height: 16),
-
-                    _buildPromptCard('Phân tích Gains Profile'),
-                    const SizedBox(height: 12),
-                    _buildPromptCard('Câu hỏi mở về nhu cầu kinh doanh'),
-                  ],
-                ),
-              ),
-            ),
-
-            Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withOpacity(0.05),
-                    blurRadius: 10,
-                    offset: const Offset(0, -2),
-                  ),
-                ],
-              ),
-              child: SafeArea(
-                child: Row(
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 12,
-                        vertical: 8,
-                      ),
-                      decoration: BoxDecoration(
-                        color: AppTheme.primaryBlue.withOpacity(0.1),
-                        borderRadius: BorderRadius.circular(20),
-                      ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Icon(
-                            Icons.smart_toy,
-                            size: 18,
-                            color: AppTheme.primaryBlue,
-                          ),
-                          const SizedBox(width: 6),
-                          const Text(
-                            '123',
-                            style: TextStyle(
-                              fontSize: 14,
-                              fontWeight: FontWeight.w600,
-                              color: AppTheme.primaryBlue,
-                            ),
-                          ),
-                          const SizedBox(width: 4),
-                          Icon(
-                            Icons.keyboard_arrow_down,
-                            size: 18,
-                            color: AppTheme.primaryBlue,
-                          ),
-                        ],
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-
-                    Container(
-                      padding: const EdgeInsets.all(8),
-                      decoration: BoxDecoration(
-                        color: AppTheme.primaryBlue,
-                        shape: BoxShape.circle,
-                      ),
-                      child: const Icon(
-                        Icons.add,
-                        size: 18,
-                        color: Colors.white,
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-
-                    Expanded(
-                      child: TextField(
-                        controller: _messageController,
-                        decoration: InputDecoration(
-                          hintText: AppConstants.askMeAnything,
-                          hintStyle: TextStyle(
-                            fontSize: 14,
-                            color: Colors.grey[400],
-                          ),
-                          border: InputBorder.none,
-                          contentPadding: EdgeInsets.zero,
-                        ),
-                      ),
-                    ),
-
-                    Row(
-                      children: [
-                        IconButton(
-                          icon: Icon(
-                            Icons.code,
-                            size: 20,
-                            color: Colors.grey[600],
-                          ),
-                          onPressed: () {},
-                        ),
-                        IconButton(
-                          icon: Icon(
-                            Icons.language,
-                            size: 20,
-                            color: Colors.grey[600],
-                          ),
-                          onPressed: () {},
-                        ),
-                        IconButton(
-                          icon: Icon(
-                            Icons.lightbulb_outline,
-                            size: 20,
-                            color: Colors.grey[600],
-                          ),
-                          onPressed: () {},
-                        ),
-                        IconButton(
-                          icon: Icon(
-                            Icons.palette_outlined,
-                            size: 20,
-                            color: Colors.grey[600],
-                          ),
-                          onPressed: () {},
-                        ),
-                        IconButton(
-                          icon: Icon(
-                            Icons.table_chart_outlined,
-                            size: 20,
-                            color: Colors.grey[600],
-                          ),
-                          onPressed: () {},
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
-      bottomNavigationBar: Container(
-        padding: const EdgeInsets.symmetric(vertical: 8),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(
-              Icons.local_fire_department,
-              size: 18,
-              color: AppTheme.primaryBlue,
-            ),
-            const SizedBox(width: 6),
-            const Text(
-              '50',
-              style: TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.w600,
-                color: AppTheme.primaryBlue,
-              ),
-            ),
-          ],
-        ),
       ),
     );
   }
 
   Widget _buildPromptCard(String text) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: isDark ? AppTheme.navyBlue : Colors.white,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.grey[300]!),
+        border: Border.all(
+          color: isDark
+              ? AppTheme.mediumBlue.withOpacity(0.5)
+              : Colors.grey[300]!,
+        ),
       ),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Text(
-            text,
-            style: const TextStyle(fontSize: 15, color: AppTheme.darkBlue),
+          Expanded(
+            child: Text(
+              text,
+              style: TextStyle(
+                fontSize: 15,
+                color: isDark ? Colors.white : AppTheme.darkBlue,
+              ),
+            ),
           ),
-          Icon(Icons.arrow_forward_ios, size: 14, color: Colors.grey),
+          Icon(
+            Icons.arrow_forward_ios,
+            size: 14,
+            color: isDark ? Colors.grey[400] : Colors.grey[600],
+          ),
         ],
       ),
     );

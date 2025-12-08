@@ -1,0 +1,345 @@
+import 'package:flutter/material.dart';
+import 'package:bytequeens_adm/config/theme.dart';
+import 'package:bytequeens_adm/features/bot/presentation/pages/chat_page.dart';
+
+class ChatHistory {
+  final String id;
+  final String firstMessage;
+  final DateTime timestamp;
+  final List<Map<String, dynamic>> messages;
+  bool isCurrent;
+
+  ChatHistory({
+    required this.id,
+    required this.firstMessage,
+    required this.timestamp,
+    this.messages = const [],
+    this.isCurrent = false,
+  });
+}
+
+class ChatHistoryPage extends StatefulWidget {
+  const ChatHistoryPage({Key? key}) : super(key: key);
+
+  @override
+  State<ChatHistoryPage> createState() => _ChatHistoryPageState();
+}
+
+class _ChatHistoryPageState extends State<ChatHistoryPage> {
+  String? _selectedChatId;
+
+  // Mock data for chat history
+  final List<ChatHistory> _chatHistories = [
+    ChatHistory(
+      id: '1',
+      firstMessage: 'Hi, can you introduce your tas?',
+      timestamp: DateTime.now().subtract(const Duration(minutes: 2)),
+      isCurrent: false,
+      messages: [
+        {
+          'content': 'Hi, can you introduce your tas?',
+          'isUser': true,
+          'timestamp': DateTime.now().subtract(const Duration(minutes: 2)),
+        },
+        {
+          'content':
+              "Hello! I'm ByteQueens AI, your friendly and creative assistant. I'm here to help you with a wide range of topics, whether you need information, ideas, or just someone to chat with.",
+          'isUser': false,
+          'timestamp': DateTime.now().subtract(const Duration(minutes: 2)),
+          'modelName': 'GPT-4o Mini',
+        },
+      ],
+    ),
+    ChatHistory(
+      id: '2',
+      firstMessage: 'Tôi muốn thông tin về Việt Nam',
+      timestamp: DateTime.now().subtract(const Duration(minutes: 4)),
+      isCurrent: false,
+      messages: [
+        {
+          'content': 'Tôi muốn thông tin về Việt Nam',
+          'isUser': true,
+          'timestamp': DateTime.now().subtract(const Duration(minutes: 4)),
+        },
+        {
+          'content':
+              'Việt Nam là một quốc gia nằm ở Đông Nam Á với diện tích khoảng 331,212 km². Thủ đô là Hà Nội và thành phố lớn nhất là Thành phố Hồ Chí Minh. Dân số khoảng 98 triệu người.',
+          'isUser': false,
+          'timestamp': DateTime.now().subtract(const Duration(minutes: 4)),
+          'modelName': 'GPT-4o Mini',
+        },
+      ],
+    ),
+    ChatHistory(
+      id: '3',
+      firstMessage: 'Hi',
+      timestamp: DateTime.now().subtract(const Duration(minutes: 5)),
+      isCurrent: false,
+      messages: [
+        {
+          'content': 'Hi',
+          'isUser': true,
+          'timestamp': DateTime.now().subtract(const Duration(minutes: 5)),
+        },
+        {
+          'content': 'Hello! How can I help you today?',
+          'isUser': false,
+          'timestamp': DateTime.now().subtract(const Duration(minutes: 5)),
+          'modelName': 'GPT-4o Mini',
+        },
+      ],
+    ),
+  ];
+
+  @override
+  void initState() {
+    super.initState();
+    // Set first item as current by default
+    if (_chatHistories.isNotEmpty) {
+      _chatHistories[0].isCurrent = true;
+      _selectedChatId = _chatHistories[0].id;
+    }
+  }
+
+  String _getTimeAgo(DateTime timestamp) {
+    final now = DateTime.now();
+    final difference = now.difference(timestamp);
+
+    if (difference.inMinutes < 60) {
+      return '${difference.inMinutes} minutes ago';
+    } else if (difference.inHours < 24) {
+      return '${difference.inHours} hours ago';
+    } else if (difference.inDays < 7) {
+      return '${difference.inDays} days ago';
+    } else {
+      return '${(difference.inDays / 7).floor()} weeks ago';
+    }
+  }
+
+  void _deleteChat(String chatId) {
+    setState(() {
+      _chatHistories.removeWhere((chat) => chat.id == chatId);
+      if (_selectedChatId == chatId && _chatHistories.isNotEmpty) {
+        _chatHistories[0].isCurrent = true;
+        _selectedChatId = _chatHistories[0].id;
+      }
+    });
+  }
+
+  void _showDeleteDialog(String chatId) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Delete Chat'),
+        content: const Text('Are you sure you want to delete this chat?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () {
+              Navigator.pop(context);
+              _deleteChat(chatId);
+            },
+            style: TextButton.styleFrom(foregroundColor: Colors.red),
+            child: const Text('Delete'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    return Scaffold(
+      backgroundColor: isDark ? AppTheme.darkBlue : Colors.grey[50],
+      appBar: AppBar(
+        backgroundColor: isDark ? AppTheme.navyBlue : Colors.white,
+        elevation: 0,
+        leading: IconButton(
+          icon: Icon(
+            Icons.close,
+            color: isDark ? Colors.white : Colors.black87,
+          ),
+          onPressed: () => Navigator.pop(context),
+        ),
+        title: Text(
+          'Chat History',
+          style: TextStyle(
+            fontSize: 20,
+            fontWeight: FontWeight.bold,
+            color: isDark ? Colors.white : Colors.black87,
+          ),
+        ),
+      ),
+      body: _chatHistories.isEmpty
+          ? Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(
+                    Icons.history,
+                    size: 64,
+                    color: isDark ? Colors.grey[600] : Colors.grey[400],
+                  ),
+                  const SizedBox(height: 16),
+                  Text(
+                    'No chat history yet',
+                    style: TextStyle(
+                      fontSize: 16,
+                      color: isDark ? Colors.grey[400] : Colors.grey[600],
+                    ),
+                  ),
+                ],
+              ),
+            )
+          : ListView.separated(
+              padding: const EdgeInsets.all(16),
+              itemCount: _chatHistories.length,
+              separatorBuilder: (context, index) => const SizedBox(height: 12),
+              itemBuilder: (context, index) {
+                final chat = _chatHistories[index];
+                return _buildChatHistoryItem(chat, isDark);
+              },
+            ),
+      floatingActionButton: FloatingActionButton.extended(
+        onPressed: () {
+          Navigator.pop(context);
+        },
+        backgroundColor: AppTheme.primaryBlue,
+        icon: const Icon(Icons.add, color: Colors.white),
+        label: const Text(
+          'Chat History',
+          style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildChatHistoryItem(ChatHistory chat, bool isDark) {
+    final isSelected = _selectedChatId == chat.id;
+
+    return InkWell(
+      onTap: () {
+        // Navigate to chat page with history
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => ChatPage.withHistory(
+              chatId: chat.id,
+              existingMessages: chat.messages,
+              modelName: 'GPT-4o Mini',
+            ),
+          ),
+        );
+      },
+      borderRadius: BorderRadius.circular(12),
+      child: Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: isSelected
+              ? (isDark
+                    ? AppTheme.primaryBlue.withOpacity(0.15)
+                    : AppTheme.primaryBlue.withOpacity(0.1))
+              : (isDark ? AppTheme.navyBlue : Colors.white),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: isSelected
+                ? AppTheme.primaryBlue
+                : (isDark
+                      ? AppTheme.mediumBlue.withOpacity(0.3)
+                      : Colors.grey[300]!),
+            width: isSelected ? 2 : 1,
+          ),
+        ),
+        child: Row(
+          children: [
+            // Content
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      if (chat.isCurrent) ...[
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 8,
+                            vertical: 4,
+                          ),
+                          decoration: BoxDecoration(
+                            color: AppTheme.primaryBlue,
+                            borderRadius: BorderRadius.circular(4),
+                          ),
+                          child: const Text(
+                            'current',
+                            style: TextStyle(
+                              fontSize: 11,
+                              fontWeight: FontWeight.w600,
+                              color: Colors.white,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                      ],
+                      Expanded(
+                        child: Text(
+                          chat.firstMessage,
+                          style: TextStyle(
+                            fontSize: 15,
+                            fontWeight: FontWeight.w500,
+                            color: isDark ? Colors.white : Colors.black87,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    _getTimeAgo(chat.timestamp),
+                    style: TextStyle(
+                      fontSize: 13,
+                      color: isDark ? Colors.grey[400] : Colors.grey[600],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(width: 12),
+
+            // Action buttons
+            Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                IconButton(
+                  icon: Icon(
+                    Icons.edit,
+                    size: 20,
+                    color: isDark ? Colors.grey[400] : Colors.grey[600],
+                  ),
+                  padding: EdgeInsets.zero,
+                  constraints: const BoxConstraints(),
+                  onPressed: () {
+                    // TODO: Edit chat title
+                  },
+                ),
+                const SizedBox(width: 12),
+                IconButton(
+                  icon: const Icon(Icons.delete, size: 20, color: Colors.red),
+                  padding: EdgeInsets.zero,
+                  constraints: const BoxConstraints(),
+                  onPressed: () => _showDeleteDialog(chat.id),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
