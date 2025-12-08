@@ -1,6 +1,6 @@
 class AppConstants {
   // App Info
-  static const String appName = 'Jarvis';
+  static const String appName = 'ByteQueens';
 
   // API Configuration
   static const String apiBaseUrl = 'https://auth-api.dev.jarvis.cx/api/v1';
@@ -41,6 +41,10 @@ class AppConstants {
   static const String createGroupRoute = '/groups/create';
   static const String groupDetailRoute = '/groups/detail';
   static const String groupChatRoute = '/groups/chat';
+
+  // Routes - Chat
+  static const String chatRoute = '/chat';
+  static const String chatHistoryRoute = '/chat-history';
 
   //Routes - Prompts
   static const String promptListRoute = '/prompts';
@@ -281,6 +285,6 @@ class AppConstants {
 
   // Mock Data (for demo)
   static const String mockEmail = 'test@jarvis.com';
-  static const String mockPassword = '123456';
+  static const String mockPassword = '12345678';
   static const String mockVerificationCode = '123456';
 }

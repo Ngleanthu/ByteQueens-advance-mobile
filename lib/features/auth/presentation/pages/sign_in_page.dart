@@ -30,9 +30,7 @@ class SignInPage extends StatelessWidget {
       body: Container(
         width: double.infinity,
         height: double.infinity,
-        decoration: const BoxDecoration(
-          gradient: AppTheme.backgroundGradient,
-        ),
+        decoration: const BoxDecoration(gradient: AppTheme.backgroundGradient),
         child: SafeArea(
           child: Center(
             child: SingleChildScrollView(
@@ -41,15 +39,12 @@ class SignInPage extends StatelessWidget {
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   const SizedBox(height: 40),
-                  
-                  // Jarvis Logo và tên
-                  const JarvisLogo(
-                    size: 70,
-                    fontSize: 40,
-                  ),
-                  
+
+                  // ByteQueens Logo và tên
+                  const JarvisLogo(size: 70, fontSize: 40),
+
                   const SizedBox(height: 24),
-                  
+
                   // Text khuyến mãi
                   RichText(
                     textAlign: TextAlign.center,
@@ -72,9 +67,9 @@ class SignInPage extends StatelessWidget {
                       ],
                     ),
                   ),
-                  
+
                   const SizedBox(height: 48),
-                  
+
                   // Card chứa nút đăng nhập
                   Container(
                     padding: const EdgeInsets.all(32),
@@ -105,7 +100,9 @@ class SignInPage extends StatelessWidget {
                               shape: RoundedRectangleBorder(
                                 borderRadius: BorderRadius.circular(12),
                                 side: BorderSide(
-                                  color: AppTheme.mediumBlue.withValues(alpha: 0.5),
+                                  color: AppTheme.mediumBlue.withValues(
+                                    alpha: 0.5,
+                                  ),
                                 ),
                               ),
                               elevation: 0,
@@ -126,9 +123,9 @@ class SignInPage extends StatelessWidget {
                             ),
                           ),
                         ),
-                        
+
                         const SizedBox(height: 32),
-                        
+
                         // Text "Don't have an account?"
                         Row(
                           mainAxisAlignment: MainAxisAlignment.center,
@@ -137,7 +134,9 @@ class SignInPage extends StatelessWidget {
                               AppConstants.noAccountText,
                               style: TextStyle(
                                 fontSize: 14,
-                                color: AppTheme.lightText.withValues(alpha: 0.8),
+                                color: AppTheme.lightText.withValues(
+                                  alpha: 0.8,
+                                ),
                               ),
                             ),
                             const SizedBox(width: 6),
@@ -162,9 +161,9 @@ class SignInPage extends StatelessWidget {
                       ],
                     ),
                   ),
-                  
+
                   const SizedBox(height: 40),
-                  
+
                   // Terms of Service và Privacy Policy
                   Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -214,7 +213,7 @@ class SignInPage extends StatelessWidget {
                       ),
                     ),
                   ),
-                  
+
                   const SizedBox(height: 40),
                 ],
               ),
