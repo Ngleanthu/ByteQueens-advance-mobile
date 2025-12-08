@@ -39,15 +39,16 @@ class ChatInputSection extends StatefulWidget {
 
 class _ChatInputSectionState extends State<ChatInputSection> {
   void _showModelSelector() {
+    // Sync với AssistantId enum
     final baseModels = [
       {
-        "id": "claude-3-haiku-20240307",
-        "name": "Claude 3 Haiku",
+        "id": "claude-3-5-sonnet-20240620",
+        "name": "Claude 3.5 Sonnet",
         "model": "dify",
       },
       {
-        "id": "claude-3-sonnet-20240229",
-        "name": "Claude 3 Sonnet",
+        "id": "claude-3-haiku-20240307",
+        "name": "Claude 3 Haiku",
         "model": "dify",
       },
       {

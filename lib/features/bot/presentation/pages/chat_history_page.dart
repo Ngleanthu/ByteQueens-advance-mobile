@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:bytequeens_adm/config/theme.dart';
 import 'package:bytequeens_adm/features/bot/presentation/pages/chat_page.dart';
+import 'package:bytequeens_adm/services/auth_service.dart';
+import 'package:bytequeens_adm/data/repositories/ai_chat_repository.dart';
+import 'package:bytequeens_adm/data/models/ai_chat_models.dart';
 
 class ChatHistory {
   final String id;
@@ -26,10 +29,15 @@ class ChatHistoryPage extends StatefulWidget {
 }
 
 class _ChatHistoryPageState extends State<ChatHistoryPage> {
-  String? _selectedChatId;
+  final _authService = AuthService();
+  final _aiChatRepo = AiChatRepository();
 
-  // Mock data for chat history
-  final List<ChatHistory> _chatHistories = [
+  String? _selectedChatId;
+  List<ChatHistory> _chatHistories = [];
+  bool _isLoading = true;
+
+  // Mock data backup (if API fails)
+  final List<ChatHistory> _mockChatHistories = [
     ChatHistory(
       id: '1',
       firstMessage: 'Hi, can you introduce your tas?',
@@ -94,10 +102,90 @@ class _ChatHistoryPageState extends State<ChatHistoryPage> {
   @override
   void initState() {
     super.initState();
-    // Set first item as current by default
-    if (_chatHistories.isNotEmpty) {
-      _chatHistories[0].isCurrent = true;
-      _selectedChatId = _chatHistories[0].id;
+    _loadChatHistories();
+  }
+
+  Future<void> _loadChatHistories() async {
+    // Check auth
+    final token = _authService.getAccessToken();
+    if (token == null) {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Please login to view chat history'),
+            backgroundColor: Colors.red,
+          ),
+        );
+        Navigator.pushReplacementNamed(context, '/signin');
+      }
+      return;
+    }
+
+    setState(() {
+      _isLoading = true;
+    });
+
+    try {
+      // Load conversations from API
+      final conversations = await _aiChatRepo.getConversationList(limit: 50);
+
+      if (mounted) {
+        setState(() {
+          _chatHistories = conversations.items
+              .map(
+                (thread) => ChatHistory(
+                  id: thread.id,
+                  firstMessage: thread.title,
+                  timestamp: DateTime.fromMillisecondsSinceEpoch(
+                    thread.createdAt * 1000,
+                  ),
+                  messages: [], // Will load when clicked
+                  isCurrent: false,
+                ),
+              )
+              .toList();
+
+          // Set first as current
+          if (_chatHistories.isNotEmpty) {
+            _chatHistories[0].isCurrent = true;
+            _selectedChatId = _chatHistories[0].id;
+          }
+
+          _isLoading = false;
+        });
+      }
+    } catch (e) {
+      // Fallback to mock data on error
+      if (mounted) {
+        setState(() {
+          _chatHistories = _mockChatHistories;
+          if (_chatHistories.isNotEmpty) {
+            _chatHistories[0].isCurrent = true;
+            _selectedChatId = _chatHistories[0].id;
+          }
+          _isLoading = false;
+        });
+
+        // Show user-friendly error
+        final errorMsg = _getFriendlyErrorMessage(e.toString());
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(errorMsg),
+            backgroundColor: Colors.orange.shade700,
+            duration: const Duration(seconds: 3),
+            action: SnackBarAction(
+              label: 'Retry',
+              textColor: Colors.white,
+              onPressed: () {
+                _loadChatHistories();
+              },
+            ),
+          ),
+        );
+      }
     }
   }
 
@@ -113,6 +201,24 @@ class _ChatHistoryPageState extends State<ChatHistoryPage> {
       return '${difference.inDays} days ago';
     } else {
       return '${(difference.inDays / 7).floor()} weeks ago';
+    }
+  }
+
+  String _getFriendlyErrorMessage(String error) {
+    final errorLower = error.toLowerCase();
+
+    if (errorLower.contains('unauthorized') || errorLower.contains('401')) {
+      return 'Please login again to view history';
+    } else if (errorLower.contains('timeout')) {
+      return 'Request timed out. Please try again';
+    } else if (errorLower.contains('no internet') ||
+        errorLower.contains('socket')) {
+      return 'No internet connection. Please check your network';
+    } else if (errorLower.contains('server error') ||
+        errorLower.contains('500')) {
+      return 'Server error. Please try again later';
+    } else {
+      return 'Failed to load chat history. Please try again';
     }
   }
 
@@ -175,7 +281,9 @@ class _ChatHistoryPageState extends State<ChatHistoryPage> {
           ),
         ),
       ),
-      body: _chatHistories.isEmpty
+      body: _isLoading
+          ? const Center(child: CircularProgressIndicator())
+          : _chatHistories.isEmpty
           ? Center(
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
@@ -223,18 +331,80 @@ class _ChatHistoryPageState extends State<ChatHistoryPage> {
     final isSelected = _selectedChatId == chat.id;
 
     return InkWell(
-      onTap: () {
-        // Navigate to chat page with history
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (context) => ChatPage.withHistory(
-              chatId: chat.id,
-              existingMessages: chat.messages,
-              modelName: 'GPT-4o Mini',
-            ),
-          ),
-        );
+      onTap: () async {
+        // Load messages for this conversation
+        try {
+          setState(() {
+            _isLoading = true;
+          });
+
+          final history = await _aiChatRepo.getConversationHistory(
+            conversationId: chat.id,
+            assistantId: AssistantId.gemini15FlashLatest.value,
+            assistantModel: 'dify',
+            limit: 50,
+          );
+
+          // Convert ApiChatMessage to UI format
+          final messages = <Map<String, dynamic>>[];
+          for (var msg in history.items) {
+            // User message (query)
+            if (msg.query.isNotEmpty) {
+              messages.add({
+                'content': msg.query,
+                'isUser': true,
+                'timestamp': DateTime.fromMillisecondsSinceEpoch(
+                  msg.createdAt * 1000,
+                ),
+              });
+            }
+            // AI response (answer)
+            if (msg.answer.isNotEmpty) {
+              messages.add({
+                'content': msg.answer,
+                'isUser': false,
+                'timestamp': DateTime.fromMillisecondsSinceEpoch(
+                  msg.createdAt * 1000,
+                ),
+                'modelName': 'AI Assistant',
+              });
+            }
+          }
+
+          setState(() {
+            _isLoading = false;
+          });
+
+          // Navigate to chat page with history
+          if (mounted) {
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) => ChatPage.withHistory(
+                  chatId: chat.id,
+                  existingMessages: messages,
+                  modelName: 'GPT-4o Mini',
+                ),
+              ),
+            );
+          }
+        } catch (e) {
+          setState(() {
+            _isLoading = false;
+          });
+
+          if (mounted) {
+            // Show user-friendly error
+            final errorMsg = _getFriendlyErrorMessage(e.toString());
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text(errorMsg),
+                backgroundColor: Colors.orange.shade700,
+                duration: const Duration(seconds: 3),
+              ),
+            );
+          }
+        }
       },
       borderRadius: BorderRadius.circular(12),
       child: Container(

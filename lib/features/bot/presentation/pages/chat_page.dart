@@ -4,6 +4,9 @@ import 'package:bytequeens_adm/features/bot/presentation/widgets/chat_input_sect
 import 'package:bytequeens_adm/features/bot/presentation/pages/chat_history_page.dart';
 import 'package:bytequeens_adm/data/models/bot.dart';
 import 'package:bytequeens_adm/services/bot_service.dart';
+import 'package:bytequeens_adm/services/auth_service.dart';
+import 'package:bytequeens_adm/data/repositories/ai_chat_repository.dart';
+import 'package:bytequeens_adm/data/models/ai_chat_models.dart';
 
 class ChatMessage {
   final String content;
@@ -52,12 +55,16 @@ class ChatPage extends StatefulWidget {
 class _ChatPageState extends State<ChatPage> {
   final _messageController = TextEditingController();
   final _botService = BotService();
+  final _authService = AuthService();
+  final _aiChatRepo = AiChatRepository();
   final ScrollController _scrollController = ScrollController();
 
   List<ChatMessage> _messages = [];
   List<Bot> _userBots = [];
   String _selectedModel = '';
   String _selectedModelId = '';
+  String? _conversationId;
+  int _remainingUsage = 0;
   bool _isLoading = false;
 
   @override
@@ -65,9 +72,8 @@ class _ChatPageState extends State<ChatPage> {
     super.initState();
     _selectedModel = widget.modelName;
     _selectedModelId = widget.modelId;
-    _loadUserBots();
 
-    // Load existing messages if provided (from chat history)
+    // Load messages IMMEDIATELY if provided
     if (widget.existingMessages != null &&
         widget.existingMessages!.isNotEmpty) {
       _messages = widget.existingMessages!
@@ -80,8 +86,9 @@ class _ChatPageState extends State<ChatPage> {
             ),
           )
           .toList();
+      _conversationId = widget.chatId;
     } else if (widget.initialMessage.isNotEmpty) {
-      // Add initial user message for new chat
+      // Add initial message IMMEDIATELY
       _messages.add(
         ChatMessage(
           content: widget.initialMessage,
@@ -90,8 +97,42 @@ class _ChatPageState extends State<ChatPage> {
         ),
       );
 
-      // Simulate AI response
-      _sendMessage(widget.initialMessage);
+      // Set loading state to trigger rebuild and show the message
+      _isLoading = true;
+    }
+
+    // Then do async init
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _checkAuthAndInit();
+    });
+  }
+
+  Future<void> _checkAuthAndInit() async {
+    // Check if user is logged in
+    final token = _authService.getAccessToken();
+    if (token == null) {
+      // Redirect to login
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Please login to use AI Chat'),
+            backgroundColor: Colors.red,
+          ),
+        );
+        Navigator.pushReplacementNamed(context, '/signin');
+      }
+      return;
+    }
+
+    // Load user bots
+    await _loadUserBots();
+
+    // If initial message exists, send it to AI
+    if (widget.initialMessage.isNotEmpty) {
+      await _sendMessage(widget.initialMessage);
     }
   }
 
@@ -127,23 +168,146 @@ class _ChatPageState extends State<ChatPage> {
       _isLoading = true;
     });
 
-    // Simulate AI response
-    await Future.delayed(const Duration(seconds: 1));
+    try {
+      // Create assistant from selected model
+      final assistant = _getAssistantFromModelId(_selectedModelId);
 
-    setState(() {
-      _messages.add(
-        ChatMessage(
-          content:
-              "Hello! I'm $_selectedModel, your friendly and creative assistant. I'm here to help you with a wide range of topics, whether you need information, ideas, or just someone to chat with. From answering questions and providing explanations to brainstorming creative projects and offering advice, I'm ready to assist you.\n\nWhat can I help you with today?",
-          isUser: false,
-          timestamp: DateTime.now(),
-          modelName: _selectedModel,
-        ),
+      MessageResponse response;
+
+      if (_conversationId == null) {
+        // Create new thread
+        response = await _aiChatRepo.createNewThread(
+          content: message,
+          assistant: assistant,
+        );
+        _conversationId = response.conversationId;
+      } else {
+        // Send message in existing conversation
+        response = await _aiChatRepo.sendMessage(
+          content: message,
+          assistant: assistant,
+          conversationHistory: [], // Can add history if needed
+        );
+      }
+
+      // Update UI with AI response
+      if (mounted) {
+        setState(() {
+          _messages.add(
+            ChatMessage(
+              content: response.message,
+              isUser: false,
+              timestamp: DateTime.now(),
+              modelName: _selectedModel,
+            ),
+          );
+          _remainingUsage = response.remainingUsage;
+          _isLoading = false;
+        });
+
+        // Scroll to bottom
+        _scrollToBottom();
+      }
+    } catch (e) {
+      // Handle error - Show friendly AI message instead of error
+      if (mounted) {
+        // Tạo message xin lỗi thân thiện từ AI
+        final errorMessage = _getErrorMessage(e.toString());
+
+        setState(() {
+          _messages.add(
+            ChatMessage(
+              content: errorMessage,
+              isUser: false,
+              timestamp: DateTime.now(),
+              modelName: _selectedModel,
+            ),
+          );
+          _isLoading = false;
+        });
+
+        // Scroll to bottom
+        _scrollToBottom();
+
+        // Optional: Show subtle error notification (không quá chói)
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: const Text('Connection issue - please try again'),
+            backgroundColor: Colors.orange.shade700,
+            duration: const Duration(seconds: 2),
+          ),
+        );
+      }
+    }
+  }
+
+  String _getErrorMessage(String error) {
+    final errorLower = error.toLowerCase();
+
+    // Xác định loại lỗi và trả về message thân thiện
+    if (errorLower.contains('unauthorized') || errorLower.contains('401')) {
+      return "I apologize, but I'm having trouble verifying your access. Please try logging in again to continue our conversation. 🔐";
+    } else if (errorLower.contains('login again')) {
+      return "I apologize, but your session has expired. Please log in again to continue our conversation. 🔐";
+    } else if (errorLower.contains('timeout') ||
+        errorLower.contains('connection timeout') ||
+        errorLower.contains('request timeout')) {
+      return "I'm sorry, but I'm taking longer than usual to respond. The network seems a bit slow right now. Could you please try sending your message again? 🌐";
+    } else if (errorLower.contains('no internet') ||
+        errorLower.contains('socketexception') ||
+        errorLower.contains('network is unreachable')) {
+      return "Oops! It seems like you're offline right now. Please check your internet connection and try again. I'll be here waiting! 📡";
+    } else if (errorLower.contains('connection refused') ||
+        errorLower.contains('cannot reach server')) {
+      return "I'm having trouble connecting to my servers right now. Please check your internet connection and try again in a moment. 🌐";
+    } else if (errorLower.contains('too many requests') ||
+        errorLower.contains('429')) {
+      return "I'm receiving a lot of messages right now! Please wait a moment and try again. Thank you for your patience! ⏳";
+    } else if (errorLower.contains('server error') ||
+        errorLower.contains('500') ||
+        errorLower.contains('502') ||
+        errorLower.contains('503') ||
+        errorLower.contains('bad gateway') ||
+        errorLower.contains('service unavailable')) {
+      return "I apologize for the inconvenience, but I'm experiencing some technical difficulties on my end. Our team is working to fix this. Please try again in a few moments. 🔧";
+    } else if (errorLower.contains('not found') || errorLower.contains('404')) {
+      return "Hmm, I seem to have lost track of our conversation. Let's start fresh! Feel free to ask me anything. 🔍";
+    } else if (errorLower.contains('forbidden') || errorLower.contains('403')) {
+      return "I apologize, but I don't have permission to process this request. Please contact support if this persists. 🚫";
+    } else if (errorLower.contains('bad request') ||
+        errorLower.contains('400')) {
+      return "I'm sorry, but I couldn't understand that request properly. Could you please rephrase your message and try again? 💭";
+    } else if (errorLower.contains('empty response') ||
+        errorLower.contains('null')) {
+      return "I apologize, but I received an incomplete response. Please try sending your message again. 🔄";
+    } else if (errorLower.contains('ssl') ||
+        errorLower.contains('certificate') ||
+        errorLower.contains('handshake')) {
+      return "I'm having trouble establishing a secure connection. Please check your internet settings and try again. 🔒";
+    } else if (errorLower.contains('cancelled') ||
+        errorLower.contains('cancel')) {
+      return "It looks like the request was cancelled. Feel free to send your message again! 🔄";
+    } else {
+      // Generic friendly error message
+      return "I apologize, but I encountered an unexpected issue while processing your message. Don't worry though! Please try sending your message again, and I'll do my best to help you. 💬";
+    }
+  }
+
+  AssistantDto _getAssistantFromModelId(String modelId) {
+    // Map model ID to AssistantId enum
+    try {
+      final assistantId = AssistantId.fromString(modelId);
+      return _aiChatRepo.createAssistant(
+        assistantId: assistantId,
+        assistantModel: AssistantModel.dify,
       );
-      _isLoading = false;
-    });
+    } catch (e) {
+      // Default to Gemini 1.5 Flash
+      return _aiChatRepo.getDefaultAssistant();
+    }
+  }
 
-    // Scroll to bottom
+  void _scrollToBottom() {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (_scrollController.hasClients) {
         _scrollController.animateTo(
@@ -265,7 +429,7 @@ class _ChatPageState extends State<ChatPage> {
               child: ChatInputSection(
                 messageController: _messageController,
                 selectedModel: _selectedModel,
-                freeMessagesRemaining: 37,
+                freeMessagesRemaining: _remainingUsage,
                 userBots: _userBots,
                 onModelChanged: _handleModelChange,
                 onSendMessage: _handleSendMessage,
@@ -285,6 +449,7 @@ class _ChatPageState extends State<ChatPage> {
                   setState(() {
                     _messages.clear();
                     _messageController.clear();
+                    _conversationId = null;
                   });
                 },
               ),

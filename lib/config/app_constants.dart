@@ -11,6 +11,13 @@ class AppConstants {
   static const String verificationCallbackUrl =
       'https://auth.dev.jarvis.cx/handler/email-verification?after_auth_return_to=%2Fauth%2Fsignin%3Fclient_id%3Djarvis_chat%26redirect%3Dhttps%253A%252F%252Fchat.dev.jarvis.cx%252Fauth%252Foauth%252Fsuccess';
 
+  // AI Chat API Configuration
+  static const String aiChatBaseUrl = 'https://api.jarvis.cx/api/v1/ai-chat';
+  static const String conversationsEndpoint = '/conversations';
+  static const String messagesEndpoint = '/messages';
+  static const String conversationMessagesEndpoint =
+      '/conversations/{conversationId}/messages';
+
   // Stack Auth API Keys
   static const String stackPublishableClientKey =
       'pck_tqsy29b64a585km2g4wnpc57ypjprzzdch8xzpq0xhayr';
