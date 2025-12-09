@@ -144,19 +144,24 @@ class _ChatHistoryPageState extends State<ChatHistoryPage> {
 
       if (mounted) {
         setState(() {
-          _chatHistories = conversations.items
-              .map(
-                (thread) => ChatHistory(
-                  id: thread.id,
-                  firstMessage: thread.title,
-                  timestamp: DateTime.fromMillisecondsSinceEpoch(
-                    thread.createdAt * 1000,
-                  ),
-                  messages: [], // Will load when clicked
-                  isCurrent: false,
-                ),
-              )
-              .toList();
+          _chatHistories = conversations.items.map((thread) {
+            // Store assistantId in messages for later use
+            final messages = thread.assistantId != null
+                ? [
+                    {'_assistantId': thread.assistantId},
+                  ]
+                : <Map<String, dynamic>>[];
+
+            return ChatHistory(
+              id: thread.id,
+              firstMessage: thread.title,
+              timestamp: DateTime.fromMillisecondsSinceEpoch(
+                thread.createdAt * 1000,
+              ),
+              messages: messages, // Store assistantId for later
+              isCurrent: false,
+            );
+          }).toList();
 
           // Don't select any item by default - user should click to select
           _selectedChatId = null;
@@ -358,19 +363,20 @@ class _ChatHistoryPageState extends State<ChatHistoryPage> {
             _isLoading = true;
           });
 
-          // Use the same assistant ID as when loading conversations
+          // Get assistantId from conversation metadata if available
+          String actualAssistantId = AppConstants.defaultAssistantId;
+          if (chat.messages.isNotEmpty &&
+              chat.messages[0].containsKey('_assistantId')) {
+            actualAssistantId = chat.messages[0]['_assistantId'] as String;
+          }
+
+          // Use the actual assistant ID from conversation
           final history = await _aiChatRepo.getConversationHistory(
             conversationId: chat.id,
-            assistantId: AppConstants.defaultAssistantId,
+            assistantId: actualAssistantId,
             assistantModel: AppConstants.defaultAssistantModel,
             limit: 100, // Increase limit to get more history
           );
-
-          // Get model display name from AssistantId
-          final assistantId = AssistantId.fromString(
-            AppConstants.defaultAssistantId,
-          );
-          final modelDisplayName = assistantId.displayName;
 
           // Convert ApiChatMessage to UI format
           // Each ApiChatMessage contains both query and answer for one exchange
@@ -396,11 +402,30 @@ class _ChatHistoryPageState extends State<ChatHistoryPage> {
 
             // Add AI response (answer) if exists - right after the query
             if (msg.answer.isNotEmpty) {
+              // Get model name from message's assistant info
+              String? modelName;
+              String? modelId;
+
+              if (msg.assistant != null) {
+                // Use assistant info from this specific message
+                final assistantId = AssistantId.fromString(msg.assistant!.id);
+                modelName = assistantId.displayName;
+                modelId = msg.assistant!.id;
+              } else {
+                // Fallback to conversation's assistant
+                final assistantId = AssistantId.fromString(actualAssistantId);
+                modelName = assistantId.displayName;
+                modelId = actualAssistantId;
+              }
+
               messages.add({
                 'content': msg.answer,
                 'isUser': false,
                 'timestamp': timestamp,
-                'modelName': modelDisplayName, // Use actual model name
+                'modelName': modelName,
+                'modelId': modelId,
+                'messageId': 'm${msg.createdAt}',
+                'files': msg.files,
               });
             }
           }
@@ -408,6 +433,19 @@ class _ChatHistoryPageState extends State<ChatHistoryPage> {
           setState(() {
             _isLoading = false;
           });
+
+          // Get default model name for page title (use first message's model or fallback)
+          String pageModelName = 'AI Chat';
+          if (messages.isNotEmpty) {
+            // Find first AI response to get model name
+            final firstAiMsg = messages.firstWhere(
+              (m) => m['isUser'] == false,
+              orElse: () => <String, dynamic>{},
+            );
+            if (firstAiMsg.isNotEmpty && firstAiMsg['modelName'] != null) {
+              pageModelName = firstAiMsg['modelName'] as String;
+            }
+          }
 
           // Navigate to chat page with history
           if (mounted) {
@@ -417,7 +455,7 @@ class _ChatHistoryPageState extends State<ChatHistoryPage> {
                 builder: (context) => ChatPage.withHistory(
                   chatId: chat.id,
                   existingMessages: messages,
-                  modelName: modelDisplayName, // Use actual model name
+                  modelName: pageModelName,
                 ),
               ),
             );

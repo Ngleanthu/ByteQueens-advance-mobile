@@ -2,23 +2,56 @@
 enum AssistantId {
   // Claude Models
   claude35Sonnet20240620('claude-3-5-sonnet-20240620'),
+  claude35Haiku('claude-3-5-haiku'),
   claude3Haiku20240307('claude-3-haiku-20240307'),
 
   // Gemini Models
   gemini15FlashLatest('gemini-1.5-flash-latest'),
   gemini15ProLatest('gemini-1.5-pro-latest'),
+  gemini15Pro('gemini-1.5-pro'),
 
   // GPT Models
   gpt4O('gpt-4o'),
-  gpt4OMini('gpt-4o-mini');
+  gpt4OMini('gpt-4o-mini'),
+  azureGpt4O('azure-gpt-4o'),
+  azureGpt4OMini('azure-gpt-4o-mini');
 
   final String value;
   const AssistantId(this.value);
 
   static AssistantId fromString(String value) {
+    // Normalize value for better matching
+    final normalized = value.toLowerCase().trim();
+
     return AssistantId.values.firstWhere(
-      (e) => e.value == value,
-      orElse: () => AssistantId.gemini15FlashLatest,
+      (e) => e.value.toLowerCase() == normalized,
+      orElse: () {
+        // Fallback: try partial matching
+        if (normalized.contains('gpt-4o-mini') ||
+            normalized.contains('azure-gpt-4o-mini')) {
+          return AssistantId.gpt4OMini;
+        }
+        if (normalized.contains('gpt-4o') ||
+            normalized.contains('azure-gpt-4o')) {
+          return AssistantId.gpt4O;
+        }
+        if (normalized.contains('gemini-1.5-pro')) {
+          return AssistantId.gemini15ProLatest;
+        }
+        if (normalized.contains('gemini-1.5-flash')) {
+          return AssistantId.gemini15FlashLatest;
+        }
+        if (normalized.contains('claude-3-5-sonnet')) {
+          return AssistantId.claude35Sonnet20240620;
+        }
+        if (normalized.contains('claude-3-5-haiku')) {
+          return AssistantId.claude35Haiku;
+        }
+        if (normalized.contains('claude-3-haiku')) {
+          return AssistantId.claude3Haiku20240307;
+        }
+        return AssistantId.gemini15FlashLatest;
+      },
     );
   }
 
@@ -27,15 +60,23 @@ enum AssistantId {
     switch (this) {
       case AssistantId.claude35Sonnet20240620:
         return 'Claude 3.5 Sonnet';
+      case AssistantId.claude35Haiku:
+        return 'Claude 3 Haiku';
       case AssistantId.claude3Haiku20240307:
         return 'Claude 3 Haiku';
       case AssistantId.gemini15FlashLatest:
         return 'Gemini 1.5 Flash';
       case AssistantId.gemini15ProLatest:
         return 'Gemini 1.5 Pro';
+      case AssistantId.gemini15Pro:
+        return 'Gemini 1.5 Pro';
       case AssistantId.gpt4O:
         return 'GPT-4o';
       case AssistantId.gpt4OMini:
+        return 'GPT-4o Mini';
+      case AssistantId.azureGpt4O:
+        return 'GPT-4o';
+      case AssistantId.azureGpt4OMini:
         return 'GPT-4o Mini';
     }
   }
@@ -93,12 +134,14 @@ class ApiChatMessage {
   final int createdAt;
   final List<String> files;
   final String query;
+  final AssistantDto? assistant; // Assistant info for this message
 
   ApiChatMessage({
     required this.answer,
     required this.createdAt,
     required this.files,
     required this.query,
+    this.assistant,
   });
 
   factory ApiChatMessage.fromJson(Map<String, dynamic> json) {
@@ -119,6 +162,40 @@ class ApiChatMessage {
       }
     }
 
+    // Parse assistant from inputs.assistant field
+    AssistantDto? assistant;
+
+    // Try to get assistant from inputs.assistant first
+    if (json['inputs'] != null && json['inputs'] is Map<String, dynamic>) {
+      final inputs = json['inputs'] as Map<String, dynamic>;
+      final assistantId = inputs['assistant'] as String?;
+
+      if (assistantId != null && assistantId.isNotEmpty) {
+        try {
+          assistant = AssistantDto(
+            id: assistantId,
+            model: 'agentic', // Default model from API
+            name: AssistantId.fromString(assistantId).displayName,
+          );
+        } catch (e) {
+          print('⚠️ Failed to create assistant from inputs: $e');
+        }
+      }
+    }
+
+    // Fallback: try assistant field directly
+    if (assistant == null &&
+        json['assistant'] != null &&
+        json['assistant'] is Map<String, dynamic>) {
+      try {
+        assistant = AssistantDto.fromJson(
+          json['assistant'] as Map<String, dynamic>,
+        );
+      } catch (e) {
+        print('⚠️ Failed to parse assistant in message: $e');
+      }
+    }
+
     return ApiChatMessage(
       answer: json['answer'] as String? ?? '',
       createdAt: createdAtValue,
@@ -126,16 +203,21 @@ class ApiChatMessage {
           (json['files'] as List<dynamic>?)?.map((e) => e as String).toList() ??
           [],
       query: json['query'] as String? ?? '',
+      assistant: assistant,
     );
   }
 
   Map<String, dynamic> toJson() {
-    return {
+    final json = {
       'answer': answer,
       'createdAt': createdAt,
       'files': files,
       'query': query,
     };
+    if (assistant != null) {
+      json['assistant'] = assistant!.toJson();
+    }
+    return json;
   }
 
   ApiChatMessage copyWith({
@@ -143,12 +225,14 @@ class ApiChatMessage {
     int? createdAt,
     List<String>? files,
     String? query,
+    AssistantDto? assistant,
   }) {
     return ApiChatMessage(
       answer: answer ?? this.answer,
       createdAt: createdAt ?? this.createdAt,
       files: files ?? this.files,
       query: query ?? this.query,
+      assistant: assistant ?? this.assistant,
     );
   }
 }
@@ -334,11 +418,13 @@ class ThreadItemModel {
   final String title;
   final String id;
   final int createdAt;
+  final String? assistantId; // Store assistant ID for display
 
   ThreadItemModel({
     required this.title,
     required this.id,
     required this.createdAt,
+    this.assistantId,
   });
 
   factory ThreadItemModel.fromJson(Map<String, dynamic> json) {
@@ -359,22 +445,37 @@ class ThreadItemModel {
       }
     }
 
+    // Lấy assistantId từ bot.id nếu có
+    String? assistantId;
+    if (json['bot'] != null && json['bot'] is Map<String, dynamic>) {
+      assistantId = json['bot']['id'] as String?;
+    }
+
     return ThreadItemModel(
       title: json['title'] as String? ?? '',
       id: json['id'] as String? ?? '',
       createdAt: createdAtValue,
+      assistantId: assistantId,
     );
   }
 
   Map<String, dynamic> toJson() {
-    return {'title': title, 'id': id, 'createdAt': createdAt};
+    final json = {'title': title, 'id': id, 'createdAt': createdAt};
+    if (assistantId != null) json['assistantId'] = assistantId!;
+    return json;
   }
 
-  ThreadItemModel copyWith({String? title, String? id, int? createdAt}) {
+  ThreadItemModel copyWith({
+    String? title,
+    String? id,
+    int? createdAt,
+    String? assistantId,
+  }) {
     return ThreadItemModel(
       title: title ?? this.title,
       id: id ?? this.id,
       createdAt: createdAt ?? this.createdAt,
+      assistantId: assistantId ?? this.assistantId,
     );
   }
 }

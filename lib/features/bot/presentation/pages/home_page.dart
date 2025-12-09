@@ -197,6 +197,10 @@ class _HomePageState extends State<HomePage> {
                 Navigator.pop(context);
 
                 // Hiển thị loading
+                // Lưu context trước khi async
+                final navigator = Navigator.of(context);
+                final scaffoldMessenger = ScaffoldMessenger.of(context);
+
                 showDialog(
                   context: context,
                   barrierDismissible: false,
@@ -207,27 +211,22 @@ class _HomePageState extends State<HomePage> {
                 // Gọi API logout
                 final result = await AuthService().logout();
 
-                if (mounted) {
-                  // Đóng loading dialog
-                  Navigator.pop(context);
+                // Đóng loading dialog
+                navigator.pop();
 
-                  // Hiển thị kết quả
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text(result.message),
-                      backgroundColor: result.success
-                          ? Colors.green
-                          : Colors.red,
-                    ),
-                  );
+                // Hiển thị kết quả
+                scaffoldMessenger.showSnackBar(
+                  SnackBar(
+                    content: Text(result.message),
+                    backgroundColor: result.success ? Colors.green : Colors.red,
+                  ),
+                );
 
-                  // Chuyển về trang sign in
-                  Navigator.pushNamedAndRemoveUntil(
-                    context,
-                    AppConstants.signInRoute,
-                    (route) => false,
-                  );
-                }
+                // Chuyển về trang sign in
+                navigator.pushNamedAndRemoveUntil(
+                  AppConstants.signInRoute,
+                  (route) => false,
+                );
               },
               style: TextButton.styleFrom(foregroundColor: Colors.red),
               child: const Text(AppConstants.logout),

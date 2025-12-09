@@ -101,6 +101,11 @@ class _ChatPageState extends State<ChatPage> {
           )
           .toList();
       _conversationId = widget.chatId;
+
+      // Scroll to bottom after loading history
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _scrollToBottom();
+      });
     } else if (widget.initialMessage.isNotEmpty) {
       // Add initial message IMMEDIATELY
       _messages.add(
@@ -175,20 +180,15 @@ class _ChatPageState extends State<ChatPage> {
       _selectedModelId = modelId;
       _selectedModel = modelName;
 
-      // Reset conversation when changing model
-      // This ensures the new model starts with a fresh conversation
-      if (_conversationId != null && _messages.isNotEmpty) {
-        _conversationId = null;
-
-        // Show info message to user
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Switched to $modelName. Starting new conversation.'),
-            backgroundColor: AppTheme.primaryBlue,
-            duration: const Duration(seconds: 2),
-          ),
-        );
-      }
+      // Giữ nguyên conversation - cho phép nhiều model trong 1 đoạn chat
+      // Show info message to user
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Switched to $modelName'),
+          backgroundColor: AppTheme.primaryBlue,
+          duration: const Duration(seconds: 1),
+        ),
+      );
     });
   }
 
@@ -423,10 +423,12 @@ class _ChatPageState extends State<ChatPage> {
             color: isDark ? Colors.white : Colors.black87,
           ),
           onPressed: () {
-            // Navigate back safely
-            if (Navigator.canPop(context)) {
-              Navigator.pop(context);
-            }
+            // Navigate to home page directly
+            Navigator.pushNamedAndRemoveUntil(
+              context,
+              '/home',
+              (route) => false,
+            );
           },
         ),
         title: Column(

@@ -77,14 +77,14 @@ class AiChatService {
   /// Get conversation history/messages
   ///
   /// [conversationId] - ID of the conversation
-  /// [assistantId] - ID of the assistant
-  /// [assistantModel] - Model of the assistant (default: "dify")
+  /// [assistantId] - ID of the assistant (optional)
+  /// [assistantModel] - Model of the assistant (optional, default: "dify")
   /// [cursor] - Cursor for pagination (optional)
   /// [limit] - Number of messages to fetch (default: 20)
   Future<ConversationHistoryResponse> getConversationHistory({
     required String conversationId,
-    required String assistantId,
-    String assistantModel = 'dify',
+    String? assistantId,
+    String? assistantModel,
     String? cursor,
     int limit = 20,
   }) async {
@@ -92,18 +92,19 @@ class AiChatService {
     if (conversationId.trim().isEmpty) {
       throw Exception('Conversation ID cannot be empty');
     }
-    if (assistantId.trim().isEmpty) {
-      throw Exception('Assistant ID cannot be empty');
-    }
 
     try {
       _initializeDio();
 
-      final queryParams = <String, dynamic>{
-        'assistantId': assistantId,
-        'assistantModel': assistantModel,
-        'limit': limit,
-      };
+      final queryParams = <String, dynamic>{'limit': limit};
+
+      // Add optional params only if provided
+      if (assistantId != null && assistantId.trim().isNotEmpty) {
+        queryParams['assistantId'] = assistantId;
+      }
+      if (assistantModel != null && assistantModel.trim().isNotEmpty) {
+        queryParams['assistantModel'] = assistantModel;
+      }
 
       // Add cursor only if provided
       if (cursor != null && cursor.isNotEmpty) {
@@ -112,7 +113,8 @@ class AiChatService {
 
       print('📜 Fetching conversation history...');
       print('   ConversationId: $conversationId');
-      print('   AssistantId: $assistantId');
+      if (assistantId != null) print('   AssistantId: $assistantId');
+      if (assistantModel != null) print('   Model: $assistantModel');
       print('   Limit: $limit');
 
       final response = await _dio.get(
@@ -232,13 +234,13 @@ class AiChatService {
 
   /// Get list of conversations/threads
   ///
-  /// [assistantId] - ID of the assistant (e.g., "gpt-4o-mini")
-  /// [assistantModel] - Model of the assistant (default: "dify")
+  /// [assistantId] - ID of the assistant (optional, e.g., "gpt-4o-mini")
+  /// [assistantModel] - Model of the assistant (optional, default: "dify")
   /// [cursor] - Cursor for pagination (optional)
   /// [limit] - Number of conversations to fetch (default: 20)
   Future<ConversationListResponse> getConversations({
-    required String assistantId,
-    String assistantModel = 'dify',
+    String? assistantId,
+    String? assistantModel,
     String? cursor,
     int limit = 20,
   }) async {
@@ -246,18 +248,19 @@ class AiChatService {
     if (limit <= 0 || limit > 100) {
       throw Exception('Limit must be between 1 and 100');
     }
-    if (assistantId.trim().isEmpty) {
-      throw Exception('Assistant ID cannot be empty');
-    }
 
     try {
       _initializeDio();
 
-      final queryParams = <String, dynamic>{
-        'assistantId': assistantId,
-        'assistantModel': assistantModel,
-        'limit': limit,
-      };
+      final queryParams = <String, dynamic>{'limit': limit};
+
+      // Add optional params only if provided
+      if (assistantId != null && assistantId.trim().isNotEmpty) {
+        queryParams['assistantId'] = assistantId;
+      }
+      if (assistantModel != null && assistantModel.trim().isNotEmpty) {
+        queryParams['assistantModel'] = assistantModel;
+      }
 
       // Add cursor only if provided
       if (cursor != null && cursor.isNotEmpty) {
@@ -265,8 +268,8 @@ class AiChatService {
       }
 
       print('📊 Fetching conversations...');
-      print('   AssistantId: $assistantId');
-      print('   Model: $assistantModel');
+      if (assistantId != null) print('   AssistantId: $assistantId');
+      if (assistantModel != null) print('   Model: $assistantModel');
       print('   Limit: $limit');
       if (cursor != null) print('   Cursor: $cursor');
 
