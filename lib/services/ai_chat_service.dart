@@ -27,6 +27,9 @@ class AiChatService {
       },
     );
 
+    // Clear existing interceptors to avoid duplicates
+    _dio.interceptors.clear();
+
     // Add interceptor for logging and error handling
     _dio.interceptors.add(
       InterceptorsWrapper(
@@ -37,15 +40,34 @@ class AiChatService {
             options.headers['Authorization'] = 'Bearer $token';
           }
 
-          // Add x-jarvis-guid header nếu có
-          if (_jarvisGuid != null && _jarvisGuid!.isNotEmpty) {
-            options.headers['x-jarvis-guid'] = _jarvisGuid;
+          // Add x-jarvis-guid header (luôn gửi, có thể rỗng)
+          options.headers['x-jarvis-guid'] = _jarvisGuid ?? '';
+
+          // Debug logging
+          print('🔵 AI Chat API Request:');
+          print('   URL: ${options.uri}');
+          print('   Method: ${options.method}');
+          print('   Headers: ${options.headers}');
+          if (options.queryParameters.isNotEmpty) {
+            print('   Query Params: ${options.queryParameters}');
+          }
+          if (options.data != null) {
+            print('   Request Body: ${options.data}');
           }
 
           return handler.next(options);
         },
+        onResponse: (response, handler) {
+          print('✅ AI Chat API Response:');
+          print('   Status: ${response.statusCode}');
+          print('   Data: ${response.data}');
+          return handler.next(response);
+        },
         onError: (error, handler) {
-          // Handle errors
+          print('❌ AI Chat API Error:');
+          print('   Status: ${error.response?.statusCode}');
+          print('   Message: ${error.message}');
+          print('   Response: ${error.response?.data}');
           return handler.next(error);
         },
       ),
@@ -77,12 +99,21 @@ class AiChatService {
     try {
       _initializeDio();
 
-      final queryParams = {
+      final queryParams = <String, dynamic>{
         'assistantId': assistantId,
         'assistantModel': assistantModel,
-        'limit': limit.toString(),
-        if (cursor != null && cursor.isNotEmpty) 'cursor': cursor,
+        'limit': limit,
       };
+
+      // Add cursor only if provided
+      if (cursor != null && cursor.isNotEmpty) {
+        queryParams['cursor'] = cursor;
+      }
+
+      print('📜 Fetching conversation history...');
+      print('   ConversationId: $conversationId');
+      print('   AssistantId: $assistantId');
+      print('   Limit: $limit');
 
       final response = await _dio.get(
         '/conversations/$conversationId/messages',
@@ -94,9 +125,13 @@ class AiChatService {
         if (response.data == null) {
           throw Exception('Empty response from server');
         }
-        return ConversationHistoryResponse.fromJson(
+        final history = ConversationHistoryResponse.fromJson(
           response.data as Map<String, dynamic>,
         );
+        print('✅ Fetched ${history.items.length} messages from history');
+        print('   Has more: ${history.hasMore}');
+        if (history.cursor != null) print('   Next cursor: ${history.cursor}');
+        return history;
       } else {
         throw Exception(
           'Failed to load conversation history: ${response.statusCode}',
@@ -140,6 +175,11 @@ class AiChatService {
         assistant: assistant,
       ).toJson();
 
+      print('📤 Sending message...');
+      print('   Content: ${content.trim()}');
+      print('   Assistant: ${assistant.id} (${assistant.name})');
+      print('   History length: ${metadata.conversation.messages.length}');
+
       final response = await _dio.post('/messages', data: requestBody);
 
       if (response.statusCode == 200 || response.statusCode == 201) {
@@ -147,7 +187,14 @@ class AiChatService {
         if (response.data == null) {
           throw Exception('Empty response from server');
         }
-        return MessageResponse.fromJson(response.data as Map<String, dynamic>);
+        final messageResponse = MessageResponse.fromJson(
+          response.data as Map<String, dynamic>,
+        );
+        print('✅ Message sent successfully!');
+        print('   ConversationId: ${messageResponse.conversationId}');
+        print('   Remaining Usage: ${messageResponse.remainingUsage}');
+        print('   Response length: ${messageResponse.message.length} chars');
+        return messageResponse;
       } else {
         throw Exception('Failed to send message: ${response.statusCode}');
       }
@@ -185,9 +232,13 @@ class AiChatService {
 
   /// Get list of conversations/threads
   ///
+  /// [assistantId] - ID of the assistant (e.g., "gpt-4o-mini")
+  /// [assistantModel] - Model of the assistant (default: "dify")
   /// [cursor] - Cursor for pagination (optional)
   /// [limit] - Number of conversations to fetch (default: 20)
   Future<ConversationListResponse> getConversations({
+    required String assistantId,
+    String assistantModel = 'dify',
     String? cursor,
     int limit = 20,
   }) async {
@@ -195,14 +246,29 @@ class AiChatService {
     if (limit <= 0 || limit > 100) {
       throw Exception('Limit must be between 1 and 100');
     }
+    if (assistantId.trim().isEmpty) {
+      throw Exception('Assistant ID cannot be empty');
+    }
 
     try {
       _initializeDio();
 
-      final queryParams = {
-        'limit': limit.toString(),
-        if (cursor != null && cursor.isNotEmpty) 'cursor': cursor,
+      final queryParams = <String, dynamic>{
+        'assistantId': assistantId,
+        'assistantModel': assistantModel,
+        'limit': limit,
       };
+
+      // Add cursor only if provided
+      if (cursor != null && cursor.isNotEmpty) {
+        queryParams['cursor'] = cursor;
+      }
+
+      print('📊 Fetching conversations...');
+      print('   AssistantId: $assistantId');
+      print('   Model: $assistantModel');
+      print('   Limit: $limit');
+      if (cursor != null) print('   Cursor: $cursor');
 
       final response = await _dio.get(
         '/conversations',
@@ -214,9 +280,12 @@ class AiChatService {
         if (response.data == null) {
           throw Exception('Empty response from server');
         }
-        return ConversationListResponse.fromJson(
+        final conversationList = ConversationListResponse.fromJson(
           response.data as Map<String, dynamic>,
         );
+        print('✅ Fetched ${conversationList.items.length} conversations');
+        print('   Has more: ${conversationList.hasMore}');
+        return conversationList;
       } else {
         throw Exception('Failed to load conversations: ${response.statusCode}');
       }

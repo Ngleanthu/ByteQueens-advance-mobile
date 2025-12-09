@@ -44,6 +44,7 @@ class AiChatRepository {
   /// [content] - The message text to send
   /// [assistant] - Assistant configuration (id, model, name)
   /// [conversationHistory] - Previous messages in the conversation
+  /// [conversationId] - ID of the conversation (if continuing existing conversation)
   /// [files] - Optional list of file URLs
   ///
   /// Returns the AI's response along with conversation ID
@@ -51,12 +52,16 @@ class AiChatRepository {
     required String content,
     required AssistantDto assistant,
     List<Map<String, dynamic>>? conversationHistory,
+    String? conversationId,
     List<String>? files,
   }) async {
     try {
-      // Build metadata with conversation history
+      // Build metadata with conversation history and ID
       final metadata = AiChatMetadata(
-        conversation: ConversationMetadata(messages: conversationHistory ?? []),
+        conversation: ConversationMetadata(
+          messages: conversationHistory ?? [],
+          id: conversationId,
+        ),
       );
 
       final response = await _service.sendMessage(
@@ -99,16 +104,22 @@ class AiChatRepository {
 
   /// Get list of all conversations/threads
   ///
+  /// [assistantId] - ID of the assistant (e.g., "gpt-4o-mini")
+  /// [assistantModel] - Model of the assistant (default: "dify")
   /// [cursor] - For pagination
   /// [limit] - Number of conversations per page
   ///
   /// Returns list of conversation threads with metadata
   Future<ConversationListResponse> getConversationList({
+    required String assistantId,
+    String assistantModel = 'dify',
     String? cursor,
     int limit = 20,
   }) async {
     try {
       final response = await _service.getConversations(
+        assistantId: assistantId,
+        assistantModel: assistantModel,
         cursor: cursor,
         limit: limit,
       );
@@ -155,15 +166,24 @@ class AiChatRepository {
 
   /// Helper: Get all conversations (auto-pagination)
   ///
+  /// [assistantId] - ID of the assistant (e.g., "gpt-4o-mini")
+  /// [assistantModel] - Model of the assistant (default: "dify")
   /// Fetches all conversation threads across multiple pages
-  Future<List<ThreadItemModel>> getAllConversations() async {
+  Future<List<ThreadItemModel>> getAllConversations({
+    required String assistantId,
+    String assistantModel = 'dify',
+  }) async {
     final List<ThreadItemModel> allConversations = [];
     String? cursor;
     bool hasMore = true;
 
     try {
       while (hasMore) {
-        final response = await getConversationList(cursor: cursor);
+        final response = await getConversationList(
+          assistantId: assistantId,
+          assistantModel: assistantModel,
+          cursor: cursor,
+        );
         allConversations.addAll(response.items);
         cursor = response.cursor;
         hasMore = response.hasMore;

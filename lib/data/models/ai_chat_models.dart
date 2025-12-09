@@ -102,9 +102,26 @@ class ApiChatMessage {
   });
 
   factory ApiChatMessage.fromJson(Map<String, dynamic> json) {
+    // Parse createdAt - có thể là int (timestamp) hoặc String (ISO date)
+    int createdAtValue = 0;
+    final createdAtRaw = json['createdAt'];
+
+    if (createdAtRaw is int) {
+      createdAtValue = createdAtRaw;
+    } else if (createdAtRaw is String) {
+      try {
+        // Parse ISO 8601 date string và convert sang timestamp (seconds)
+        final dateTime = DateTime.parse(createdAtRaw);
+        createdAtValue = dateTime.millisecondsSinceEpoch ~/ 1000;
+      } catch (e) {
+        print('⚠️ Failed to parse createdAt in message: $createdAtRaw');
+        createdAtValue = 0;
+      }
+    }
+
     return ApiChatMessage(
       answer: json['answer'] as String? ?? '',
-      createdAt: json['createdAt'] as int? ?? 0,
+      createdAt: createdAtValue,
       files:
           (json['files'] as List<dynamic>?)?.map((e) => e as String).toList() ??
           [],
@@ -157,8 +174,9 @@ class AiChatMetadata {
 
 class ConversationMetadata {
   final List<Map<String, dynamic>> messages;
+  final String? id;
 
-  ConversationMetadata({required this.messages});
+  ConversationMetadata({required this.messages, this.id});
 
   factory ConversationMetadata.fromJson(Map<String, dynamic> json) {
     return ConversationMetadata(
@@ -167,11 +185,16 @@ class ConversationMetadata {
               ?.map((e) => e as Map<String, dynamic>)
               .toList() ??
           [],
+      id: json['id'] as String?,
     );
   }
 
   Map<String, dynamic> toJson() {
-    return {'messages': messages};
+    final Map<String, dynamic> json = {'messages': messages};
+    if (id != null) {
+      json['id'] = id!;
+    }
+    return json;
   }
 }
 
@@ -319,10 +342,27 @@ class ThreadItemModel {
   });
 
   factory ThreadItemModel.fromJson(Map<String, dynamic> json) {
+    // Parse createdAt - có thể là int (timestamp) hoặc String (ISO date)
+    int createdAtValue = 0;
+    final createdAtRaw = json['createdAt'];
+
+    if (createdAtRaw is int) {
+      createdAtValue = createdAtRaw;
+    } else if (createdAtRaw is String) {
+      try {
+        // Parse ISO 8601 date string và convert sang timestamp (seconds)
+        final dateTime = DateTime.parse(createdAtRaw);
+        createdAtValue = dateTime.millisecondsSinceEpoch ~/ 1000;
+      } catch (e) {
+        print('⚠️ Failed to parse createdAt: $createdAtRaw');
+        createdAtValue = 0;
+      }
+    }
+
     return ThreadItemModel(
       title: json['title'] as String? ?? '',
       id: json['id'] as String? ?? '',
-      createdAt: json['createdAt'] as int? ?? 0,
+      createdAt: createdAtValue,
     );
   }
 

@@ -3,13 +3,13 @@ class AppConstants {
   static const String appName = 'ByteQueens';
 
   // API Configuration
-  static const String apiBaseUrl = 'https://auth-api.dev.jarvis.cx/api/v1';
+  static const String apiBaseUrl = 'https://auth-api.jarvis.cx/api/v1';
   static const String signUpEndpoint = '/auth/password/sign-up';
   static const String signInEndpoint = '/auth/password/sign-in';
   static const String refreshTokenEndpoint = '/auth/sessions/current/refresh';
   static const String logoutEndpoint = '/auth/sessions/current';
   static const String verificationCallbackUrl =
-      'https://auth.dev.jarvis.cx/handler/email-verification?after_auth_return_to=%2Fauth%2Fsignin%3Fclient_id%3Djarvis_chat%26redirect%3Dhttps%253A%252F%252Fchat.dev.jarvis.cx%252Fauth%252Foauth%252Fsuccess';
+      'https://auth.jarvis.cx/handler/email-verification?after_auth_return_to=%2Fauth%2Fsignin%3Fclient_id%3Djarvis_chat%26redirect%3Dhttps%253A%252F%252Fchat.jarvis.cx%252Fauth%252Foauth%252Fsuccess';
 
   // AI Chat API Configuration
   static const String aiChatBaseUrl = 'https://api.jarvis.cx/api/v1/ai-chat';
@@ -18,10 +18,14 @@ class AppConstants {
   static const String conversationMessagesEndpoint =
       '/conversations/{conversationId}/messages';
 
+  // Default AI Assistant Configuration
+  static const String defaultAssistantId = 'gpt-4o-mini';
+  static const String defaultAssistantModel = 'dify';
+
   // Stack Auth API Keys
   static const String stackPublishableClientKey =
-      'pck_tqsy29b64a585km2g4wnpc57ypjprzzdch8xzpq0xhayr';
-  static const String stackProjectId = 'a914f06b-5e46-4966-8693-80e4b9f4f409';
+      'pck_7wjweasxxnfspvr20dvmyd9pjj0p9kp755bxxcm4ae1er';
+  static const String stackProjectId = '45a1e2fd-77ee-4872-9fb7-987b8c119633';
   static const String stackAccessType = 'client';
 
   // Routes - Splash

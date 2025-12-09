@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_markdown/flutter_markdown.dart';
 import 'package:bytequeens_adm/config/theme.dart';
 import 'package:bytequeens_adm/features/bot/presentation/widgets/chat_input_section.dart';
 import 'package:bytequeens_adm/features/bot/presentation/pages/chat_history_page.dart';
@@ -13,12 +14,18 @@ class ChatMessage {
   final bool isUser;
   final DateTime timestamp;
   final String? modelName;
+  final String? modelId;
+  final String? messageId;
+  final List<String> files;
 
   ChatMessage({
     required this.content,
     required this.isUser,
     required this.timestamp,
     this.modelName,
+    this.modelId,
+    this.messageId,
+    this.files = const [],
   });
 }
 
@@ -83,6 +90,13 @@ class _ChatPageState extends State<ChatPage> {
               isUser: msg['isUser'] as bool,
               timestamp: msg['timestamp'] as DateTime,
               modelName: msg['modelName'] as String?,
+              modelId: msg['modelId'] as String?,
+              messageId: msg['messageId'] as String?,
+              files:
+                  (msg['files'] as List<dynamic>?)
+                      ?.map((e) => e as String)
+                      .toList() ??
+                  [],
             ),
           )
           .toList();
@@ -94,6 +108,8 @@ class _ChatPageState extends State<ChatPage> {
           content: widget.initialMessage,
           isUser: true,
           timestamp: DateTime.now(),
+          modelId: _selectedModelId,
+          messageId: 'm${DateTime.now().millisecondsSinceEpoch}',
         ),
       );
 
@@ -158,6 +174,21 @@ class _ChatPageState extends State<ChatPage> {
     setState(() {
       _selectedModelId = modelId;
       _selectedModel = modelName;
+
+      // Reset conversation when changing model
+      // This ensures the new model starts with a fresh conversation
+      if (_conversationId != null && _messages.isNotEmpty) {
+        _conversationId = null;
+
+        // Show info message to user
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Switched to $modelName. Starting new conversation.'),
+            backgroundColor: AppTheme.primaryBlue,
+            duration: const Duration(seconds: 2),
+          ),
+        );
+      }
     });
   }
 
@@ -182,13 +213,47 @@ class _ChatPageState extends State<ChatPage> {
         );
         _conversationId = response.conversationId;
       } else {
-        // Send message in existing conversation
+        // Build conversation history from existing messages
+        // Format theo API spec: mỗi message cần có assistant, role, content, files, id
+        final conversationHistory = _messages.map((msg) {
+          // Get assistant info for this message
+          final msgModelId = msg.modelId ?? _selectedModelId;
+          final msgAssistant = _getAssistantFromModelId(msgModelId);
+
+          return {
+            'assistant': {'id': msgAssistant.id, 'model': msgAssistant.model},
+            'role': msg.isUser ? 'user' : 'assistant',
+            'content': msg.content,
+            'files': msg.files,
+            'id': msg.messageId ?? 'm${DateTime.now().millisecondsSinceEpoch}',
+          };
+        }).toList();
+
+        print('📝 Building conversation history:');
+        print('   Total messages: ${conversationHistory.length}');
+        print(
+          '   Last message role: ${conversationHistory.isNotEmpty ? conversationHistory.last['role'] : 'none'}',
+        );
+
+        // Send message in existing conversation with full history
         response = await _aiChatRepo.sendMessage(
           content: message,
           assistant: assistant,
-          conversationHistory: [], // Can add history if needed
+          conversationHistory: conversationHistory,
+          conversationId:
+              _conversationId, // Pass conversation ID to maintain context
         );
+
+        // Update conversationId if it changed (should stay the same for existing conversation)
+        if (response.conversationId != _conversationId) {
+          print(
+            '⚠️ ConversationId changed! Old: $_conversationId, New: ${response.conversationId}',
+          );
+        }
+        _conversationId = response.conversationId;
       }
+
+      print('💬 Current ConversationId: $_conversationId');
 
       // Update UI with AI response
       if (mounted) {
@@ -199,6 +264,8 @@ class _ChatPageState extends State<ChatPage> {
               isUser: false,
               timestamp: DateTime.now(),
               modelName: _selectedModel,
+              modelId: _selectedModelId,
+              messageId: 'm${DateTime.now().millisecondsSinceEpoch}',
             ),
           );
           _remainingUsage = response.remainingUsage;
@@ -221,6 +288,8 @@ class _ChatPageState extends State<ChatPage> {
               isUser: false,
               timestamp: DateTime.now(),
               modelName: _selectedModel,
+              modelId: _selectedModelId,
+              messageId: 'm${DateTime.now().millisecondsSinceEpoch}',
             ),
           );
           _isLoading = false;
@@ -325,7 +394,13 @@ class _ChatPageState extends State<ChatPage> {
 
     setState(() {
       _messages.add(
-        ChatMessage(content: message, isUser: true, timestamp: DateTime.now()),
+        ChatMessage(
+          content: message,
+          isUser: true,
+          timestamp: DateTime.now(),
+          modelId: _selectedModelId,
+          messageId: 'm${DateTime.now().millisecondsSinceEpoch}',
+        ),
       );
     });
 
@@ -619,14 +694,59 @@ class _ChatPageState extends State<ChatPage> {
                   ],
                 ),
                 const SizedBox(height: 8),
-                Text(
-                  message.content,
-                  style: TextStyle(
-                    fontSize: 15,
-                    height: 1.5,
-                    color: isDark ? Colors.white : Colors.black87,
-                  ),
-                ),
+                message.isUser
+                    ? Text(
+                        message.content,
+                        style: TextStyle(
+                          fontSize: 15,
+                          height: 1.5,
+                          color: isDark ? Colors.white : Colors.black87,
+                        ),
+                      )
+                    : MarkdownBody(
+                        data: message.content,
+                        selectable: true,
+                        styleSheet: MarkdownStyleSheet(
+                          p: TextStyle(
+                            fontSize: 15,
+                            height: 1.5,
+                            color: isDark ? Colors.white : Colors.black87,
+                          ),
+                          code: TextStyle(
+                            backgroundColor: isDark
+                                ? Colors.grey[800]
+                                : Colors.grey[200],
+                            fontFamily: 'monospace',
+                            fontSize: 14,
+                          ),
+                          codeblockDecoration: BoxDecoration(
+                            color: isDark ? Colors.grey[900] : Colors.grey[100],
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          blockquote: TextStyle(
+                            color: isDark ? Colors.grey[400] : Colors.grey[600],
+                            fontStyle: FontStyle.italic,
+                          ),
+                          h1: TextStyle(
+                            fontSize: 24,
+                            fontWeight: FontWeight.bold,
+                            color: isDark ? Colors.white : Colors.black87,
+                          ),
+                          h2: TextStyle(
+                            fontSize: 20,
+                            fontWeight: FontWeight.bold,
+                            color: isDark ? Colors.white : Colors.black87,
+                          ),
+                          h3: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                            color: isDark ? Colors.white : Colors.black87,
+                          ),
+                          listBullet: TextStyle(
+                            color: isDark ? Colors.white : Colors.black87,
+                          ),
+                        ),
+                      ),
                 if (!message.isUser) ...[
                   const SizedBox(height: 12),
                   Row(

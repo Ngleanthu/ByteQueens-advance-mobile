@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:bytequeens_adm/config/theme.dart';
+import 'package:bytequeens_adm/config/app_constants.dart';
 import 'package:bytequeens_adm/features/bot/presentation/pages/chat_page.dart';
 import 'package:bytequeens_adm/services/auth_service.dart';
 import 'package:bytequeens_adm/data/repositories/ai_chat_repository.dart';
@@ -129,8 +130,17 @@ class _ChatHistoryPageState extends State<ChatHistoryPage> {
     });
 
     try {
+      // print('📱 Loading chat histories...');
+      // print('   Token: ${token.isNotEmpty ? "Available (${token.substring(0, 10)}...)" : "Missing"}');
+
       // Load conversations from API
-      final conversations = await _aiChatRepo.getConversationList(limit: 50);
+      final conversations = await _aiChatRepo.getConversationList(
+        assistantId: AppConstants.defaultAssistantId,
+        assistantModel: AppConstants.defaultAssistantModel,
+        limit: 50,
+      );
+
+      // print('✅ Loaded ${conversations.items.length} conversations');
 
       if (mounted) {
         setState(() {
@@ -148,29 +158,28 @@ class _ChatHistoryPageState extends State<ChatHistoryPage> {
               )
               .toList();
 
-          // Set first as current
-          if (_chatHistories.isNotEmpty) {
-            _chatHistories[0].isCurrent = true;
-            _selectedChatId = _chatHistories[0].id;
-          }
-
+          // Don't select any item by default - user should click to select
+          _selectedChatId = null;
           _isLoading = false;
         });
       }
     } catch (e) {
+      // Keep error logging for debugging
+      print('❌ Error loading chat histories:');
+      print('   Error: $e');
+
       // Fallback to mock data on error
       if (mounted) {
         setState(() {
           _chatHistories = _mockChatHistories;
-          if (_chatHistories.isNotEmpty) {
-            _chatHistories[0].isCurrent = true;
-            _selectedChatId = _chatHistories[0].id;
-          }
+          // Don't select any item by default
+          _selectedChatId = null;
           _isLoading = false;
         });
 
         // Show user-friendly error
         final errorMsg = _getFriendlyErrorMessage(e.toString());
+
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(errorMsg),
@@ -332,41 +341,66 @@ class _ChatHistoryPageState extends State<ChatHistoryPage> {
 
     return InkWell(
       onTap: () async {
+        // Update selected chat
+        setState(() {
+          // Clear previous selection
+          for (var c in _chatHistories) {
+            c.isCurrent = false;
+          }
+          // Set current selection
+          chat.isCurrent = true;
+          _selectedChatId = chat.id;
+        });
+
         // Load messages for this conversation
         try {
           setState(() {
             _isLoading = true;
           });
 
+          // Use the same assistant ID as when loading conversations
           final history = await _aiChatRepo.getConversationHistory(
             conversationId: chat.id,
-            assistantId: AssistantId.gemini15FlashLatest.value,
-            assistantModel: 'dify',
-            limit: 50,
+            assistantId: AppConstants.defaultAssistantId,
+            assistantModel: AppConstants.defaultAssistantModel,
+            limit: 100, // Increase limit to get more history
           );
 
+          // Get model display name from AssistantId
+          final assistantId = AssistantId.fromString(
+            AppConstants.defaultAssistantId,
+          );
+          final modelDisplayName = assistantId.displayName;
+
           // Convert ApiChatMessage to UI format
+          // Each ApiChatMessage contains both query and answer for one exchange
           final messages = <Map<String, dynamic>>[];
-          for (var msg in history.items) {
-            // User message (query)
+
+          // Sort by timestamp ascending (oldest first) for proper display order
+          final sortedItems = history.items.toList()
+            ..sort((a, b) => a.createdAt.compareTo(b.createdAt));
+
+          for (var msg in sortedItems) {
+            final timestamp = DateTime.fromMillisecondsSinceEpoch(
+              msg.createdAt * 1000,
+            );
+
+            // Add user message (query) if exists
             if (msg.query.isNotEmpty) {
               messages.add({
                 'content': msg.query,
                 'isUser': true,
-                'timestamp': DateTime.fromMillisecondsSinceEpoch(
-                  msg.createdAt * 1000,
-                ),
+                'timestamp': timestamp,
               });
             }
-            // AI response (answer)
+
+            // Add AI response (answer) if exists - right after the query
             if (msg.answer.isNotEmpty) {
               messages.add({
                 'content': msg.answer,
                 'isUser': false,
-                'timestamp': DateTime.fromMillisecondsSinceEpoch(
-                  msg.createdAt * 1000,
-                ),
-                'modelName': 'AI Assistant',
+                'timestamp': timestamp,
+                'modelName': modelDisplayName, // Use actual model name
               });
             }
           }
@@ -383,7 +417,7 @@ class _ChatHistoryPageState extends State<ChatHistoryPage> {
                 builder: (context) => ChatPage.withHistory(
                   chatId: chat.id,
                   existingMessages: messages,
-                  modelName: 'GPT-4o Mini',
+                  modelName: modelDisplayName, // Use actual model name
                 ),
               ),
             );
