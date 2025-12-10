@@ -49,11 +49,6 @@ class _SignUpPageState extends State<SignUpPage> {
           });
 
           if (result.success) {
-            // Tự động gửi verification code
-            await _authService.sendVerificationCode(
-              _emailController.text.trim(),
-            );
-
             if (mounted) {
               // Show success message
               ScaffoldMessenger.of(context).showSnackBar(
@@ -63,14 +58,10 @@ class _SignUpPageState extends State<SignUpPage> {
                 ),
               );
 
-              // Navigate to verification page
+              // Navigate to login page directly
               Navigator.pushReplacementNamed(
                 context,
-                AppConstants.verificationRoute,
-                arguments: {
-                  'email': _emailController.text.trim(),
-                  'fromSignUp': true,
-                },
+                AppConstants.emailLoginRoute,
               );
             }
           } else {
