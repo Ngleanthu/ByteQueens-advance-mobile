@@ -4,8 +4,6 @@ import 'package:bytequeens_adm/features/splash/presentation/pages/splash_page.da
 import 'package:bytequeens_adm/features/auth/presentation/pages/sign_in_page.dart';
 import 'package:bytequeens_adm/features/auth/presentation/pages/email_login_page.dart';
 import 'package:bytequeens_adm/features/auth/presentation/pages/sign_up_page.dart';
-import 'package:bytequeens_adm/features/auth/presentation/pages/forgot_password_page.dart';
-import 'package:bytequeens_adm/features/auth/presentation/pages/verification_page.dart';
 import 'package:bytequeens_adm/features/bot/presentation/pages/home_page.dart';
 import 'package:bytequeens_adm/features/bot/presentation/pages/bots_list_page.dart';
 import 'package:bytequeens_adm/features/bot/presentation/pages/create_bot_page.dart';
@@ -25,8 +23,6 @@ class AppRoutes {
     AppConstants.signInRoute: (context) => const SignInPage(),
     AppConstants.emailLoginRoute: (context) => const EmailLoginPage(),
     AppConstants.signUpRoute: (context) => const SignUpPage(),
-    AppConstants.forgotPasswordRoute: (context) => const ForgotPasswordPage(),
-    AppConstants.verificationRoute: (context) => const VerificationPage(),
     AppConstants.homeRoute: (context) => const HomePage(),
     AppConstants.botsListRoute: (context) => const BotsListPage(),
     AppConstants.createBotRoute: (context) => const CreateBotPage(),
@@ -56,16 +52,6 @@ class AppRoutes {
       case AppConstants.signUpRoute:
         return MaterialPageRoute(
           builder: (context) => const SignUpPage(),
-          settings: settings,
-        );
-      case AppConstants.forgotPasswordRoute:
-        return MaterialPageRoute(
-          builder: (context) => const ForgotPasswordPage(),
-          settings: settings,
-        );
-      case AppConstants.verificationRoute:
-        return MaterialPageRoute(
-          builder: (context) => const VerificationPage(),
           settings: settings,
         );
       case AppConstants.homeRoute:

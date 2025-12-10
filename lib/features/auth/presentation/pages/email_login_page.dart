@@ -222,28 +222,6 @@ class _EmailLoginPageState extends State<EmailLoginPage> {
                           },
                         ),
 
-                        const SizedBox(height: 12),
-
-                        // Forgot Password
-                        Align(
-                          alignment: Alignment.centerRight,
-                          child: TextButton(
-                            onPressed: () {
-                              Navigator.pushNamed(
-                                context,
-                                AppConstants.forgotPasswordRoute,
-                              );
-                            },
-                            child: const Text(
-                              AppConstants.forgotPassword,
-                              style: TextStyle(
-                                fontSize: 14,
-                                color: AppTheme.primaryBlue,
-                              ),
-                            ),
-                          ),
-                        ),
-
                         const SizedBox(height: 24),
 
                         // Login Button
