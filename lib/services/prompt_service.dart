@@ -30,17 +30,24 @@ class PromptService {
       // ⚠️ WARNING: Chỉ dùng cho development/testing
       print('🔧 Setting up SSL bypass...');
 
-      (_dio.httpClientAdapter as IOHttpClientAdapter).createHttpClient = () {
-        final client = HttpClient();
-        client.badCertificateCallback =
-            (X509Certificate cert, String host, int port) {
-              print('⚠️ Bypassing SSL for $host:$port');
-              return true;
-            };
-        return client;
-      };
+      // Chỉ setup SSL bypass khi không phải web platform
+      if (_dio.httpClientAdapter is IOHttpClientAdapter) {
+        (_dio.httpClientAdapter as IOHttpClientAdapter).createHttpClient = () {
+          final client = HttpClient();
+          client.badCertificateCallback =
+              (X509Certificate cert, String host, int port) {
+                print('⚠️ Bypassing SSL for $host:$port');
+                return true;
+              };
+          return client;
+        };
+      } else {
+        // Web platform - không cần SSL bypass
+        print('🌐 Running on web platform - SSL bypass not needed');
+      }
     } catch (e) {
-      rethrow;
+      print('⚠️ SSL bypass setup failed: $e');
+      // Không throw error, để app vẫn chạy được
     }
   }
 

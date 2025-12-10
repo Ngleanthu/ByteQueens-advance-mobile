@@ -17,8 +17,9 @@ class PromptItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Card(
-      color: Colors.white,
+      color: isDark ? Colors.grey[850] : Colors.white,
       elevation: 1,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
       child: Padding(
@@ -31,10 +32,10 @@ class PromptItem extends StatelessWidget {
                 Expanded(
                   child: Text(
                     prompt.title,
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 16,
                       fontWeight: FontWeight.w600,
-                      color: Colors.black87,
+                      color: isDark ? Colors.white : Colors.black87,
                     ),
                   ),
                 ),
@@ -42,11 +43,16 @@ class PromptItem extends StatelessWidget {
                   icon: Icon(
                     prompt.isFavorite ? Icons.star : Icons.star_border,
                   ),
-                  color: prompt.isFavorite ? Colors.amber : Colors.grey,
+                  color: prompt.isFavorite
+                      ? Colors.amber
+                      : (isDark ? Colors.grey[400] : Colors.grey),
                   onPressed: onToggleFavorite,
                 ),
                 IconButton(
-                  icon: const Icon(Icons.info_outline, color: Colors.grey),
+                  icon: Icon(
+                    Icons.info_outline,
+                    color: isDark ? Colors.grey[400] : Colors.grey,
+                  ),
                   onPressed: onPreview,
                 ),
               ],
@@ -58,7 +64,10 @@ class PromptItem extends StatelessWidget {
               prompt.description?.isNotEmpty == true
                   ? prompt.description!
                   : 'No description available.',
-              style: TextStyle(color: Colors.grey.shade700, fontSize: 14),
+              style: TextStyle(
+                color: isDark ? Colors.grey[400] : Colors.grey.shade700,
+                fontSize: 14,
+              ),
             ),
 
             const SizedBox(height: 10),

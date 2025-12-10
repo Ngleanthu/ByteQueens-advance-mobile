@@ -5,13 +5,14 @@ class CreatePromptDialog extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     final TextEditingController titleController = TextEditingController();
     final TextEditingController contentController = TextEditingController();
     final TextEditingController descriptionController = TextEditingController();
 
     return Dialog(
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-      backgroundColor: const Color.fromARGB(255, 255, 255, 255),
+      backgroundColor: isDark ? Colors.grey[850] : Colors.white,
       child: Container(
         width: MediaQuery.of(context).size.width * 0.85,
         constraints: const BoxConstraints(maxWidth: 500),
@@ -21,12 +22,12 @@ class CreatePromptDialog extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             // Header
-            const Text(
+            Text(
               'Create New Prompt',
               style: TextStyle(
                 fontSize: 22,
                 fontWeight: FontWeight.w600,
-                color: Colors.black,
+                color: isDark ? Colors.white : Colors.black,
               ),
             ),
             const SizedBox(height: 24),
@@ -38,18 +39,21 @@ class CreatePromptDialog extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     // Title Field
-                    const Text(
+                    Text(
                       'Title',
                       style: TextStyle(
                         fontSize: 14,
                         fontWeight: FontWeight.w500,
-                        color: Colors.black,
+                        color: isDark ? Colors.white : Colors.black,
                       ),
                     ),
                     const SizedBox(height: 8),
                     TextField(
                       controller: titleController,
-                      style: const TextStyle(fontSize: 14),
+                      style: TextStyle(
+                        fontSize: 14,
+                        color: isDark ? Colors.white : Colors.black,
+                      ),
                       decoration: InputDecoration(
                         hintText: 'Enter prompt title',
                         hintStyle: TextStyle(
@@ -62,11 +66,19 @@ class CreatePromptDialog extends StatelessWidget {
                         ),
                         border: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(8),
-                          borderSide: BorderSide(color: Colors.grey[300]!),
+                          borderSide: BorderSide(
+                            color: isDark
+                                ? Colors.grey[700]!
+                                : Colors.grey[300]!,
+                          ),
                         ),
                         enabledBorder: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(8),
-                          borderSide: BorderSide(color: Colors.grey[300]!),
+                          borderSide: BorderSide(
+                            color: isDark
+                                ? Colors.grey[700]!
+                                : Colors.grey[300]!,
+                          ),
                         ),
                         focusedBorder: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(8),
@@ -76,18 +88,18 @@ class CreatePromptDialog extends StatelessWidget {
                           ),
                         ),
                         filled: true,
-                        fillColor: Colors.grey[50],
+                        fillColor: isDark ? Colors.grey[800] : Colors.grey[50],
                       ),
                     ),
                     const SizedBox(height: 20),
 
                     // Content Field
-                    const Text(
+                    Text(
                       'Content',
                       style: TextStyle(
                         fontSize: 14,
                         fontWeight: FontWeight.w500,
-                        color: Colors.black,
+                        color: isDark ? Colors.white : Colors.black,
                       ),
                     ),
                     const SizedBox(height: 6),
@@ -97,7 +109,9 @@ class CreatePromptDialog extends StatelessWidget {
                         vertical: 6,
                       ),
                       decoration: BoxDecoration(
-                        color: Colors.blue[50],
+                        color: isDark
+                            ? Colors.blue[900]?.withOpacity(0.3)
+                            : Colors.blue[50],
                         borderRadius: BorderRadius.circular(6),
                       ),
                       child: Row(
@@ -124,7 +138,10 @@ class CreatePromptDialog extends StatelessWidget {
                     TextField(
                       controller: contentController,
                       maxLines: 4,
-                      style: const TextStyle(fontSize: 14),
+                      style: TextStyle(
+                        fontSize: 14,
+                        color: isDark ? Colors.white : Colors.black,
+                      ),
                       decoration: InputDecoration(
                         hintText: 'Enter prompt content with [placeholders]',
                         hintStyle: TextStyle(
@@ -134,11 +151,19 @@ class CreatePromptDialog extends StatelessWidget {
                         contentPadding: const EdgeInsets.all(14),
                         border: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(8),
-                          borderSide: BorderSide(color: Colors.grey[300]!),
+                          borderSide: BorderSide(
+                            color: isDark
+                                ? Colors.grey[700]!
+                                : Colors.grey[300]!,
+                          ),
                         ),
                         enabledBorder: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(8),
-                          borderSide: BorderSide(color: Colors.grey[300]!),
+                          borderSide: BorderSide(
+                            color: isDark
+                                ? Colors.grey[700]!
+                                : Colors.grey[300]!,
+                          ),
                         ),
                         focusedBorder: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(8),
@@ -148,25 +173,28 @@ class CreatePromptDialog extends StatelessWidget {
                           ),
                         ),
                         filled: true,
-                        fillColor: Colors.grey[50],
+                        fillColor: isDark ? Colors.grey[800] : Colors.grey[50],
                       ),
                     ),
                     const SizedBox(height: 20),
 
                     // Description Field
-                    const Text(
+                    Text(
                       'Description',
                       style: TextStyle(
                         fontSize: 14,
                         fontWeight: FontWeight.w500,
-                        color: Colors.black,
+                        color: isDark ? Colors.white : Colors.black,
                       ),
                     ),
                     const SizedBox(height: 8),
                     TextField(
                       controller: descriptionController,
                       maxLines: 3,
-                      style: const TextStyle(fontSize: 14),
+                      style: TextStyle(
+                        fontSize: 14,
+                        color: isDark ? Colors.white : Colors.black,
+                      ),
                       decoration: InputDecoration(
                         hintText: 'Enter a brief description',
                         hintStyle: TextStyle(
@@ -176,11 +204,19 @@ class CreatePromptDialog extends StatelessWidget {
                         contentPadding: const EdgeInsets.all(14),
                         border: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(8),
-                          borderSide: BorderSide(color: Colors.grey[300]!),
+                          borderSide: BorderSide(
+                            color: isDark
+                                ? Colors.grey[700]!
+                                : Colors.grey[300]!,
+                          ),
                         ),
                         enabledBorder: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(8),
-                          borderSide: BorderSide(color: Colors.grey[300]!),
+                          borderSide: BorderSide(
+                            color: isDark
+                                ? Colors.grey[700]!
+                                : Colors.grey[300]!,
+                          ),
                         ),
                         focusedBorder: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(8),
@@ -190,7 +226,7 @@ class CreatePromptDialog extends StatelessWidget {
                           ),
                         ),
                         filled: true,
-                        fillColor: Colors.grey[50],
+                        fillColor: isDark ? Colors.grey[800] : Colors.grey[50],
                       ),
                     ),
                   ],
@@ -207,7 +243,7 @@ class CreatePromptDialog extends StatelessWidget {
                 TextButton(
                   onPressed: () => Navigator.of(context).pop(),
                   style: TextButton.styleFrom(
-                    foregroundColor: Colors.black,
+                    foregroundColor: isDark ? Colors.white : Colors.black,
                     padding: const EdgeInsets.symmetric(
                       horizontal: 20,
                       vertical: 12,

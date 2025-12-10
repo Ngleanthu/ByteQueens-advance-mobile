@@ -91,9 +91,10 @@ class _PromptListPageState extends State<PromptListPage> {
   }
 
   Widget _buildFilterTabs() {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Container(
       decoration: BoxDecoration(
-        color: Colors.grey[100],
+        color: isDark ? Colors.grey[800] : Colors.grey[100],
         borderRadius: BorderRadius.circular(30),
       ),
       padding: const EdgeInsets.all(4),
@@ -125,6 +126,7 @@ class _PromptListPageState extends State<PromptListPage> {
     required bool selected,
     required VoidCallback onTap,
   }) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Expanded(
       child: GestureDetector(
         onTap: onTap,
@@ -142,7 +144,9 @@ class _PromptListPageState extends State<PromptListPage> {
             textAlign: TextAlign.center,
             style: TextStyle(
               fontWeight: selected ? FontWeight.bold : FontWeight.normal,
-              color: selected ? Colors.white : Colors.black,
+              color: selected
+                  ? Colors.white
+                  : (isDark ? Colors.white : Colors.black),
             ),
           ),
         ),
@@ -151,11 +155,12 @@ class _PromptListPageState extends State<PromptListPage> {
   }
 
   Widget _buildSearchBar() {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Row(
       children: [
         Expanded(
           child: TextField(
-            style: const TextStyle(color: Colors.black),
+            style: TextStyle(color: isDark ? Colors.white : Colors.black),
             controller: _searchController,
             onChanged: (value) => setState(() => _searchQuery = value),
             decoration: InputDecoration(
@@ -163,7 +168,9 @@ class _PromptListPageState extends State<PromptListPage> {
               hintStyle: TextStyle(color: Colors.grey[400]),
               prefixIcon: Icon(Icons.search, color: Colors.grey[400]),
               filled: true,
-              fillColor: const Color.fromARGB(255, 248, 248, 248),
+              fillColor: isDark
+                  ? Colors.grey[800]
+                  : const Color.fromARGB(255, 248, 248, 248),
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(12),
                 borderSide: BorderSide.none,
@@ -174,7 +181,10 @@ class _PromptListPageState extends State<PromptListPage> {
         ),
         if (_searchQuery.isNotEmpty)
           IconButton(
-            icon: const Icon(Icons.clear, color: Colors.grey),
+            icon: Icon(
+              Icons.clear,
+              color: isDark ? Colors.grey[400] : Colors.grey,
+            ),
             onPressed: () {
               _searchController.clear();
               setState(() => _searchQuery = '');
@@ -302,11 +312,19 @@ class _PromptListPageState extends State<PromptListPage> {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: isDark ? Colors.grey[900] : Colors.white,
       appBar: AppBar(
-        backgroundColor: Colors.white,
+        backgroundColor: isDark ? Colors.grey[850] : Colors.white,
         elevation: 0,
+        leading: IconButton(
+          icon: Icon(
+            Icons.arrow_back,
+            color: isDark ? Colors.white : Colors.black,
+          ),
+          onPressed: () => Navigator.of(context).pop(),
+        ),
         title: _buildAppBarTitle(),
         automaticallyImplyLeading: false,
       ),
@@ -334,17 +352,24 @@ class _PromptListPageState extends State<PromptListPage> {
   }
 
   Widget _buildAppBarTitle() {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
-        const Text(
+        Text(
           "Prompts Library",
-          style: TextStyle(fontSize: 20, color: Colors.black),
+          style: TextStyle(
+            fontSize: 20,
+            color: isDark ? Colors.white : Colors.black,
+          ),
         ),
         Row(
           children: [
             IconButton(
-              icon: const Icon(Icons.add, color: Colors.black),
+              icon: Icon(
+                Icons.add,
+                color: isDark ? Colors.white : Colors.black,
+              ),
               onPressed: () async {
                 final result = await showDialog(
                   context: context,
@@ -356,7 +381,9 @@ class _PromptListPageState extends State<PromptListPage> {
             IconButton(
               icon: Icon(
                 _filterFavoritesOnly ? Icons.star : Icons.star_border,
-                color: _filterFavoritesOnly ? Colors.amber : Colors.black,
+                color: _filterFavoritesOnly
+                    ? Colors.amber
+                    : (isDark ? Colors.white : Colors.black),
               ),
               onPressed: () {
                 setState(() => _filterFavoritesOnly = !_filterFavoritesOnly);
