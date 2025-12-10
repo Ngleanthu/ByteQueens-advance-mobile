@@ -3,7 +3,9 @@ import 'package:bytequeens_adm/config/theme.dart';
 import 'package:bytequeens_adm/config/app_constants.dart';
 import 'package:bytequeens_adm/services/auth_service.dart';
 import 'package:bytequeens_adm/services/bot_service.dart';
+import 'package:bytequeens_adm/services/prompt_service.dart';
 import 'package:bytequeens_adm/data/models/bot.dart';
+import 'package:bytequeens_adm/data/models/prompt.dart';
 import 'package:bytequeens_adm/app.dart';
 import 'package:bytequeens_adm/features/bot/presentation/widgets/chat_input_section.dart';
 import 'package:bytequeens_adm/features/bot/presentation/widgets/prompt_suggestion_overlay.dart';
@@ -21,15 +23,19 @@ class HomePage extends StatefulWidget {
 class _HomePageState extends State<HomePage> {
   final _messageController = TextEditingController();
   final _botService = BotService();
+  final _promptService = PromptService();
   String _selectedModel = 'GPT-4o Mini';
   String _selectedModelId = 'gpt-4o-mini';
   List<Bot> _userBots = [];
+  List<Prompt> _suggestedPrompts = [];
   bool _isMenuExpanded = true;
+  bool _isLoadingPrompts = true;
 
   @override
   void initState() {
     super.initState();
     _loadUserBots();
+    _loadSuggestedPrompts();
   }
 
   Future<void> _loadUserBots() async {
@@ -40,6 +46,25 @@ class _HomePageState extends State<HomePage> {
       });
     } catch (e) {
       // Handle error silently or show a snackbar
+    }
+  }
+
+  Future<void> _loadSuggestedPrompts() async {
+    try {
+      final prompts = await _promptService.getPrompts(
+        isPublic: true,
+        limit: 5,
+        offset: 0,
+      );
+      setState(() {
+        _suggestedPrompts = prompts;
+        _isLoadingPrompts = false;
+      });
+    } catch (e) {
+      setState(() {
+        _isLoadingPrompts = false;
+      });
+      // Handle error silently
     }
   }
 
@@ -526,11 +551,54 @@ class _HomePageState extends State<HomePage> {
 
                                     const SizedBox(height: 16),
 
-                                    _buildPromptCard('Phân tích Gains Profile'),
-                                    const SizedBox(height: 12),
-                                    _buildPromptCard(
-                                      'Câu hỏi mở về nhu cầu kinh doanh',
-                                    ),
+                                    // Dynamic prompt list from library
+                                    _isLoadingPrompts
+                                        ? const Center(
+                                            child: Padding(
+                                              padding: EdgeInsets.all(20.0),
+                                              child:
+                                                  CircularProgressIndicator(),
+                                            ),
+                                          )
+                                        : _suggestedPrompts.isEmpty
+                                        ? Center(
+                                            child: Padding(
+                                              padding: const EdgeInsets.all(
+                                                20.0,
+                                              ),
+                                              child: Text(
+                                                'No prompts available',
+                                                style: TextStyle(
+                                                  color: Colors.grey,
+                                                ),
+                                              ),
+                                            ),
+                                          )
+                                        : Column(
+                                            children: _suggestedPrompts
+                                                .asMap()
+                                                .entries
+                                                .map((entry) {
+                                                  final index = entry.key;
+                                                  final prompt = entry.value;
+                                                  return Column(
+                                                    children: [
+                                                      if (index > 0)
+                                                        const SizedBox(
+                                                          height: 12,
+                                                        ),
+                                                      _buildPromptCard(
+                                                        prompt.title,
+                                                        onTap: () =>
+                                                            _handlePromptTap(
+                                                              prompt,
+                                                            ),
+                                                      ),
+                                                    ],
+                                                  );
+                                                })
+                                                .toList(),
+                                          ),
                                   ],
                                 ),
                               ),
@@ -602,38 +670,59 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
-  Widget _buildPromptCard(String text) {
+  Widget _buildPromptCard(String text, {VoidCallback? onTap}) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: isDark ? AppTheme.navyBlue : Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(
-          color: isDark
-              ? AppTheme.mediumBlue.withOpacity(0.5)
-              : Colors.grey[300]!,
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(12),
+      child: Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: isDark ? AppTheme.navyBlue : Colors.white,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: isDark
+                ? AppTheme.mediumBlue.withOpacity(0.5)
+                : Colors.grey[300]!,
+          ),
         ),
-      ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Expanded(
-            child: Text(
-              text,
-              style: TextStyle(
-                fontSize: 15,
-                color: isDark ? Colors.white : AppTheme.darkBlue,
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Expanded(
+              child: Text(
+                text,
+                style: TextStyle(
+                  fontSize: 15,
+                  color: isDark ? Colors.white : AppTheme.darkBlue,
+                ),
               ),
             ),
-          ),
-          Icon(
-            Icons.arrow_forward_ios,
-            size: 14,
-            color: isDark ? Colors.grey[400] : Colors.grey[600],
-          ),
-        ],
+            Icon(
+              Icons.arrow_forward_ios,
+              size: 14,
+              color: isDark ? Colors.grey[400] : Colors.grey[600],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _handlePromptTap(Prompt prompt) {
+    // Fill the message input with the prompt content
+    _messageController.text = prompt.content;
+
+    // Optionally navigate to chat with the prompt
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => ChatPage(
+          initialMessage: prompt.content,
+          modelId: _selectedModelId,
+          modelName: _selectedModel,
+        ),
       ),
     );
   }
