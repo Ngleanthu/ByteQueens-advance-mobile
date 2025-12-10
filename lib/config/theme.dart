@@ -9,6 +9,13 @@ class AppTheme {
   static const Color lightText = Color(0xFFE0E1DD);
   static const Color whiteText = Colors.white;
   
+  // Light mode colors
+  static const Color lightBackground = Color(0xFFF5F5F5);
+  static const Color lightInputBg = Color(0xFFF5F5F5);
+  static const Color lightInputBorder = Color(0xFFE0E0E0);
+  static const Color lightIconColor = Color(0xFF6B7280);
+  static const Color lightTextColor = Color(0xFF1F2937);
+  
   // Gradient cho background
   static const LinearGradient backgroundGradient = LinearGradient(
     begin: Alignment.topLeft,

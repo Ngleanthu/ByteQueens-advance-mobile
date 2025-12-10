@@ -134,7 +134,7 @@ class AuthService {
 
           return AuthResult(
             success: true,
-            message: 'Account created successfully! Please verify your email.',
+            message: 'Account created successfully! Login to continue.',
             requiresVerification: true,
             data: {
               'access_token': _accessToken,
