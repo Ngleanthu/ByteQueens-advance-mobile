@@ -363,6 +363,8 @@ class _ChatInputSectionState extends State<ChatInputSection> {
                         mainAxisSize: MainAxisSize.min,
                         children: [
                           const Icon(Icons.add, size: 16, color: Colors.white),
+                            const SizedBox(width: 4),
+                          const Icon(Icons.smart_toy, size: 16, color: Colors.white), // icon bot
                           if (!isCompact) ...[
                             const SizedBox(width: 4),
                             const Text(

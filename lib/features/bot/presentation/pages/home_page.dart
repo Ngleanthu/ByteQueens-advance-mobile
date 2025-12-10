@@ -6,6 +6,7 @@ import 'package:bytequeens_adm/services/bot_service.dart';
 import 'package:bytequeens_adm/data/models/bot.dart';
 import 'package:bytequeens_adm/app.dart';
 import 'package:bytequeens_adm/features/bot/presentation/widgets/chat_input_section.dart';
+import 'package:bytequeens_adm/features/bot/presentation/widgets/prompt_suggestion_overlay.dart';
 import 'package:bytequeens_adm/features/bot/presentation/widgets/left_menu_drawer.dart';
 import 'package:bytequeens_adm/features/bot/presentation/pages/chat_page.dart';
 import 'package:bytequeens_adm/features/bot/presentation/pages/chat_history_page.dart';
@@ -535,52 +536,57 @@ class _HomePageState extends State<HomePage> {
                               ),
                             ),
 
-                            // New Chat Input Section Widget
-                            ChatInputSection(
+                            // New Chat Input Section Widget with Prompt Suggestions
+                            PromptSuggestionOverlay(
                               messageController: _messageController,
-                              selectedModel: _selectedModel,
-                              freeMessagesRemaining: 45,
-                              userBots: _userBots,
-                              onModelChanged: _handleModelChange,
-                              onSendMessage: () {
-                                // Handle send message
-                                if (_messageController.text.trim().isNotEmpty) {
-                                  final message = _messageController.text
-                                      .trim();
-                                  _messageController.clear();
+                              child: ChatInputSection(
+                                messageController: _messageController,
+                                selectedModel: _selectedModel,
+                                freeMessagesRemaining: 45,
+                                userBots: _userBots,
+                                onModelChanged: _handleModelChange,
+                                onSendMessage: () {
+                                  // Handle send message
+                                  if (_messageController.text
+                                      .trim()
+                                      .isNotEmpty) {
+                                    final message = _messageController.text
+                                        .trim();
+                                    _messageController.clear();
 
-                                  // Navigate to chat page
+                                    // Navigate to chat page
+                                    Navigator.push(
+                                      context,
+                                      MaterialPageRoute(
+                                        builder: (context) => ChatPage(
+                                          initialMessage: message,
+                                          modelId: _selectedModelId,
+                                          modelName: _selectedModel,
+                                        ),
+                                      ),
+                                    );
+                                  }
+                                },
+                                onCreateBot: () {
+                                  Navigator.pushNamed(
+                                    context,
+                                    AppConstants.botsListRoute,
+                                  );
+                                },
+                                onHistoryTap: () {
                                   Navigator.push(
                                     context,
                                     MaterialPageRoute(
-                                      builder: (context) => ChatPage(
-                                        initialMessage: message,
-                                        modelId: _selectedModelId,
-                                        modelName: _selectedModel,
-                                      ),
+                                      builder: (context) =>
+                                          const ChatHistoryPage(),
                                     ),
                                   );
-                                }
-                              },
-                              onCreateBot: () {
-                                Navigator.pushNamed(
-                                  context,
-                                  AppConstants.botsListRoute,
-                                );
-                              },
-                              onHistoryTap: () {
-                                Navigator.push(
-                                  context,
-                                  MaterialPageRoute(
-                                    builder: (context) =>
-                                        const ChatHistoryPage(),
-                                  ),
-                                );
-                              },
-                              onNewChat: () {
-                                // Clear message input for new chat
-                                _messageController.clear();
-                              },
+                                },
+                                onNewChat: () {
+                                  // Clear message input for new chat
+                                  _messageController.clear();
+                                },
+                              ),
                             ),
                           ],
                         ),

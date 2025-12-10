@@ -23,7 +23,10 @@ class ChatHistory {
 }
 
 class ChatHistoryPage extends StatefulWidget {
-  const ChatHistoryPage({Key? key}) : super(key: key);
+  final String? currentConversationId;
+
+  const ChatHistoryPage({Key? key, this.currentConversationId})
+    : super(key: key);
 
   @override
   State<ChatHistoryPage> createState() => _ChatHistoryPageState();
@@ -34,6 +37,7 @@ class _ChatHistoryPageState extends State<ChatHistoryPage> {
   final _aiChatRepo = AiChatRepository();
 
   String? _selectedChatId;
+  String? _currentConversationId;
   List<ChatHistory> _chatHistories = [];
   bool _isLoading = true;
 
@@ -103,6 +107,7 @@ class _ChatHistoryPageState extends State<ChatHistoryPage> {
   @override
   void initState() {
     super.initState();
+    _currentConversationId = widget.currentConversationId;
     _loadChatHistories();
   }
 
@@ -152,6 +157,11 @@ class _ChatHistoryPageState extends State<ChatHistoryPage> {
                   ]
                 : <Map<String, dynamic>>[];
 
+            // Kiểm tra nếu đây là conversation hiện tại
+            final isCurrent =
+                _currentConversationId != null &&
+                thread.id == _currentConversationId;
+
             return ChatHistory(
               id: thread.id,
               firstMessage: thread.title,
@@ -159,12 +169,16 @@ class _ChatHistoryPageState extends State<ChatHistoryPage> {
                 thread.createdAt * 1000,
               ),
               messages: messages, // Store assistantId for later
-              isCurrent: false,
+              isCurrent: isCurrent,
             );
           }).toList();
 
-          // Don't select any item by default - user should click to select
-          _selectedChatId = null;
+          // Tự động select conversation hiện tại nếu có
+          if (_currentConversationId != null) {
+            _selectedChatId = _currentConversationId;
+          } else {
+            _selectedChatId = null;
+          }
           _isLoading = false;
         });
       }
@@ -355,6 +369,8 @@ class _ChatHistoryPageState extends State<ChatHistoryPage> {
           // Set current selection
           chat.isCurrent = true;
           _selectedChatId = chat.id;
+          // Update current conversation ID
+          _currentConversationId = chat.id;
         });
 
         // Load messages for this conversation

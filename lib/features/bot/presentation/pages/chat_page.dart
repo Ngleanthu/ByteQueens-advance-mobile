@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_markdown/flutter_markdown.dart';
 import 'package:bytequeens_adm/config/theme.dart';
+import 'package:bytequeens_adm/config/app_constants.dart';
 import 'package:bytequeens_adm/features/bot/presentation/widgets/chat_input_section.dart';
+import 'package:bytequeens_adm/features/bot/presentation/widgets/prompt_suggestion_overlay.dart';
 import 'package:bytequeens_adm/features/bot/presentation/pages/chat_history_page.dart';
 import 'package:bytequeens_adm/data/models/bot.dart';
 import 'package:bytequeens_adm/services/bot_service.dart';
@@ -503,32 +505,37 @@ class _ChatPageState extends State<ChatPage> {
           Center(
             child: Container(
               constraints: const BoxConstraints(maxWidth: 1200),
-              child: ChatInputSection(
+              child: PromptSuggestionOverlay(
                 messageController: _messageController,
-                selectedModel: _selectedModel,
-                freeMessagesRemaining: _remainingUsage,
-                userBots: _userBots,
-                onModelChanged: _handleModelChange,
-                onSendMessage: _handleSendMessage,
-                onCreateBot: () {
-                  // Navigate to create bot
-                },
-                onHistoryTap: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => const ChatHistoryPage(),
-                    ),
-                  );
-                },
-                onNewChat: () {
-                  // Clear current chat and start new one
-                  setState(() {
-                    _messages.clear();
-                    _messageController.clear();
-                    _conversationId = null;
-                  });
-                },
+                child: ChatInputSection(
+                  messageController: _messageController,
+                  selectedModel: _selectedModel,
+                  freeMessagesRemaining: _remainingUsage,
+                  userBots: _userBots,
+                  onModelChanged: _handleModelChange,
+                  onSendMessage: _handleSendMessage,
+                  onCreateBot: () {
+                    // Navigate to create bot
+                  },
+                  onHistoryTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => ChatHistoryPage(
+                          currentConversationId: _conversationId,
+                        ),
+                      ),
+                    );
+                  },
+                  onNewChat: () {
+                    // Clear current chat and start new one
+                    setState(() {
+                      _messages.clear();
+                      _messageController.clear();
+                      _conversationId = null;
+                    });
+                  },
+                ),
               ),
             ),
           ),
@@ -569,12 +576,34 @@ class _ChatPageState extends State<ChatPage> {
             ),
           ),
           const SizedBox(height: 40),
-          Text(
-            'Suggested prompts',
-            style: TextStyle(
-              fontSize: 14,
-              color: isDark ? Colors.grey[400] : Colors.grey[600],
-            ),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                'Suggested prompts',
+                style: TextStyle(
+                  fontSize: 14,
+                  color: isDark ? Colors.grey[400] : Colors.grey[600],
+                ),
+              ),
+              TextButton(
+                onPressed: () {
+                  Navigator.pushNamed(context, AppConstants.promptListRoute);
+                },
+                style: TextButton.styleFrom(
+                  foregroundColor: AppTheme.primaryBlue,
+                ),
+                child: Text(
+                  AppConstants.viewAll,
+                  style: TextStyle(
+                    fontSize: 14,
+                    color: AppTheme.primaryBlue,
+                    fontWeight: FontWeight.w600,
+                    inherit: true,
+                  ),
+                ),
+              ),
+            ],
           ),
           const SizedBox(height: 16),
           _buildPromptCard('Phân tích Gains Profile', isDark),
