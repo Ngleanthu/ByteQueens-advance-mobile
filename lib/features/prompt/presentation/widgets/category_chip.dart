@@ -23,6 +23,7 @@ class CategoryChipsWidget extends StatelessWidget {
     {'value': 'productivity', 'label': 'Productivity'},
     {'value': 'ai_painting', 'label': 'AI Painting'},
     {'value': 'seo', 'label': 'SEO'},
+    {'value': 'bni', 'label': 'BNI'},
     {'value': 'other', 'label': 'Other'},
   ];
 

@@ -1,12 +1,113 @@
+import 'dart:io';
 import 'package:dio/dio.dart';
-import '../api/prompt_api.dart';
+import 'package:dio/io.dart';
 import '../data/models/prompt.dart';
+import 'package:bytequeens_adm/services/auth_service.dart';
 
 class PromptService {
-  final PromptApi api;
+  final Dio _dio;
+  final AuthService _authService = AuthService();
 
-  PromptService({PromptApi? api}) : api = api ?? PromptApi();
+  static const String _fallbackToken = "";
 
+  PromptService({Dio? dio})
+    : _dio =
+          dio ??
+          Dio(
+            BaseOptions(
+              baseUrl: 'https://api.jarvis.cx/api/v1',
+              connectTimeout: const Duration(seconds: 30),
+              receiveTimeout: const Duration(seconds: 30),
+            ),
+          ) {
+    _setupSslBypass();
+    _setupInterceptors();
+  }
+
+  /// Setup SSL bypass để fix lỗi certificate expired
+  void _setupSslBypass() {
+    try {
+      // ⚠️ WARNING: Chỉ dùng cho development/testing
+      print('🔧 Setting up SSL bypass...');
+
+      (_dio.httpClientAdapter as IOHttpClientAdapter).createHttpClient = () {
+        final client = HttpClient();
+        client.badCertificateCallback =
+            (X509Certificate cert, String host, int port) {
+              print('⚠️ Bypassing SSL for $host:$port');
+              return true;
+            };
+        return client;
+      };
+    } catch (e) {
+      rethrow;
+    }
+  }
+
+  /// Setup interceptors for logging
+  void _setupInterceptors() {
+    _dio.interceptors.clear();
+    _dio.interceptors.add(
+      InterceptorsWrapper(
+        onRequest: (options, handler) {
+          return handler.next(options);
+        },
+        onResponse: (response, handler) {
+          return handler.next(response);
+        },
+        onError: (error, handler) {
+          return handler.next(error);
+        },
+      ),
+    );
+  }
+
+  Future<Response> _createPromptApi(
+    Map<String, dynamic> body, {
+    String? token,
+  }) async {
+    final actualToken =
+        token ?? _authService.getAccessToken() ?? _fallbackToken;
+
+    return _dio.post(
+      '/prompts',
+      data: body,
+      options: Options(
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $actualToken',
+        },
+      ),
+    );
+  }
+
+  Future<Response> _getPromptsApi({
+    String? category,
+    bool? isPublic,
+    bool? isFavorite,
+    int limit = 20,
+    int offset = 0,
+    String? token,
+  }) async {
+    final actualToken =
+        token ?? _authService.getAccessToken() ?? _fallbackToken;
+
+    final query = {
+      if (category != null) 'category': category,
+      if (isPublic != null) 'isPublic': isPublic.toString(),
+      if (isFavorite != null) 'isFavorite': isFavorite.toString(),
+      'limit': limit.toString(),
+      'offset': offset.toString(),
+    };
+
+    return _dio.get(
+      '/prompts',
+      queryParameters: query,
+      options: Options(headers: {'Authorization': 'Bearer $actualToken'}),
+    );
+  }
+
+  /// CREATE PROMPT
   Future<Prompt> createPrompt({
     required String title,
     required String content,
@@ -14,49 +115,33 @@ class PromptService {
     required bool isPublic,
     String? token,
   }) async {
-    final temp = Prompt(
-      id: '',
-      title: title,
-      content: content,
-      description: description,
-      isPublic: isPublic,
-    );
-
-    final body = temp.toJsonForCreate();
+    final body = {
+      "title": title,
+      "content": content,
+      "description": description,
+      "isPublic": isPublic,
+    };
 
     try {
-      final resp = await api.createPrompt(body, token: token);
-      if (resp.statusCode != null &&
-          resp.statusCode! >= 200 &&
-          resp.statusCode! < 300) {
-        final data = resp.data;
-        if (data is Map<String, dynamic>) {
-          return Prompt.fromJson(data);
-        } else {
-          return Prompt.fromJson(Map<String, dynamic>.from(data));
-        }
-      } else {
-        throw Exception('Create prompt failed: ${resp.statusCode}');
+      final resp = await _createPromptApi(body, token: token);
+
+      return Prompt.fromJson(
+        resp.data is Map<String, dynamic>
+            ? resp.data
+            : Map<String, dynamic>.from(resp.data),
+      );
+    } on DioException catch (e) {
+      String msg = "Network error";
+
+      if (e.response != null) {
+        final d = e.response!.data;
+        msg = (d is Map && d['message'] != null) ? d['message'] : d.toString();
       }
-    } on DioError catch (e) {
-      String message = 'Network error';
-      if (e.response != null && e.response?.data != null) {
-        try {
-          final d = e.response!.data;
-          if (d is Map && d['message'] != null)
-            message = d['message'].toString();
-          else
-            message = d.toString();
-        } catch (_) {
-          message = e.message ?? "";
-        }
-      } else {
-        message = e.message ?? "";
-      }
-      throw Exception(message);
+      throw Exception(msg);
     }
   }
 
+  /// GET PROMPTS
   Future<List<Prompt>> getPrompts({
     bool? isPublic,
     String? category,
@@ -65,14 +150,8 @@ class PromptService {
     int offset = 0,
     String? token,
   }) async {
-    print("🔧 [Service] getPrompts()");
-    print("│ isPublic: $isPublic");
-    print("│ category: $category");
-    print("│ isFavorite: $isFavorite");
-    print("│ limit: $limit, offset: $offset");
-
     try {
-      final resp = await api.getPrompts(
+      final resp = await _getPromptsApi(
         isPublic: isPublic,
         category: category,
         isFavorite: isFavorite,
@@ -81,27 +160,68 @@ class PromptService {
         token: token,
       );
 
-      print("🔍 [Service] Raw response: ${resp.data}");
-
       final data = resp.data;
 
-      // Case list trực tiếp
       if (data is List) {
-        print("📦 [Service] Received List<Prompt> (direct)");
         return data.map((e) => Prompt.fromJson(e)).toList();
       }
 
-      // Case response dạng { items: [...] }
       if (data is Map && data['items'] is List) {
-        print("📦 [Service] Received items[] inside map");
         return (data['items'] as List).map((e) => Prompt.fromJson(e)).toList();
       }
 
-      print("❌ [Service] Invalid response format");
       throw Exception("Invalid response format");
     } catch (e) {
-      print("❌ [Service] getPrompts error: $e");
       rethrow;
+    }
+  }
+
+  //ADD Favorite
+  Future<void> addFavorite(String promptId, {String? token}) async {
+    final actualToken =
+        token ?? _authService.getAccessToken() ?? _fallbackToken;
+
+    try {
+      await _dio.post(
+        '/prompts/$promptId/favorite',
+        options: Options(headers: {'Authorization': 'Bearer $actualToken'}),
+      );
+    } on DioException catch (e) {
+      String msg = "Network error";
+
+      if (e.response != null) {
+        final d = e.response!.data;
+        msg = (d is Map && d['message'] != null) ? d['message'] : d.toString();
+      }
+
+      throw Exception(msg);
+    }
+  }
+
+  Future<void> removeFavorite(String promptId, {String? token}) async {
+    final actualToken =
+        token ?? _authService.getAccessToken() ?? _fallbackToken;
+
+    try {
+      await _dio.delete(
+        '/prompts/$promptId/favorite',
+        options: Options(headers: {'Authorization': 'Bearer $actualToken'}),
+      );
+    } on DioException catch (e) {
+      String msg = "Network error";
+      if (e.response != null) {
+        final d = e.response!.data;
+        msg = (d is Map && d['message'] != null) ? d['message'] : d.toString();
+      }
+      throw Exception(msg);
+    }
+  }
+
+  Future<void> toggleFavorite(bool isFav, String promptId) async {
+    if (isFav) {
+      await removeFavorite(promptId);
+    } else {
+      await addFavorite(promptId);
     }
   }
 }
