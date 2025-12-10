@@ -2,19 +2,31 @@ import 'package:flutter/material.dart';
 import '../../../../services/prompt_service.dart';
 import '../../../../data/models/prompt.dart';
 
-class CreatePromptDialog extends StatefulWidget {
-  const CreatePromptDialog({Key? key}) : super(key: key);
+class EditPromptDialog extends StatefulWidget {
+  final Prompt prompt;
+  const EditPromptDialog({Key? key, required this.prompt}) : super(key: key);
 
   @override
-  State<CreatePromptDialog> createState() => _CreatePromptDialogState();
+  State<EditPromptDialog> createState() => _EditPromptDialogState();
 }
 
-class _CreatePromptDialogState extends State<CreatePromptDialog> {
-  final TextEditingController titleController = TextEditingController();
-  final TextEditingController contentController = TextEditingController();
-  final TextEditingController descriptionController = TextEditingController();
+class _EditPromptDialogState extends State<EditPromptDialog> {
+  late TextEditingController titleController;
+  late TextEditingController contentController;
+  late TextEditingController descriptionController;
 
   bool isLoading = false;
+
+  @override
+  void initState() {
+    super.initState();
+    // fill inputs with existing prompt data
+    titleController = TextEditingController(text: widget.prompt.title);
+    contentController = TextEditingController(text: widget.prompt.content);
+    descriptionController = TextEditingController(
+      text: widget.prompt.description ?? '',
+    );
+  }
 
   @override
   void dispose() {
@@ -24,7 +36,7 @@ class _CreatePromptDialogState extends State<CreatePromptDialog> {
     super.dispose();
   }
 
-  Future<void> _handleCreate() async {
+  Future<void> _handleSave() async {
     final title = titleController.text.trim();
     final content = contentController.text.trim();
     final description = descriptionController.text.trim();
@@ -39,20 +51,27 @@ class _CreatePromptDialogState extends State<CreatePromptDialog> {
     setState(() => isLoading = true);
 
     try {
-      final Prompt newPrompt = await PromptService().createPrompt(
-        title: title,
-        content: content,
-        description: description,
-        isPublic: false, // << ALWAYS false
+      await PromptService().updatePrompt(
+        widget.prompt.id,
+        // optional token here
       );
 
-      if (mounted) Navigator.pop(context, newPrompt);
+      if (!mounted) return;
+
+      // update local prompt object (optional)
+      widget.prompt.title = title;
+      widget.prompt.content = content;
+      widget.prompt.description = description;
+
+      Navigator.pop(context, widget.prompt);
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Prompt updated successfully")),
+      );
     } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text("Failed: $e")));
-      }
+      if (!mounted) return;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text("Failed to update: $e")));
     } finally {
       if (mounted) setState(() => isLoading = false);
     }
@@ -74,7 +93,7 @@ class _CreatePromptDialogState extends State<CreatePromptDialog> {
             children: [
               Center(
                 child: Text(
-                  "Create New Prompt",
+                  "Edit Prompt",
                   style: TextStyle(
                     fontSize: 20,
                     fontWeight: FontWeight.bold,
@@ -82,7 +101,6 @@ class _CreatePromptDialogState extends State<CreatePromptDialog> {
                   ),
                 ),
               ),
-
               const SizedBox(height: 24),
 
               // TITLE
@@ -163,7 +181,7 @@ class _CreatePromptDialogState extends State<CreatePromptDialog> {
                   ),
                   const SizedBox(width: 10),
                   ElevatedButton(
-                    onPressed: isLoading ? null : _handleCreate,
+                    onPressed: isLoading ? null : _handleSave,
                     style: ElevatedButton.styleFrom(
                       padding: const EdgeInsets.symmetric(
                         horizontal: 22,
@@ -182,7 +200,7 @@ class _CreatePromptDialogState extends State<CreatePromptDialog> {
                               color: Colors.white,
                             ),
                           )
-                        : const Text("Create"),
+                        : const Text("Save"),
                   ),
                 ],
               ),

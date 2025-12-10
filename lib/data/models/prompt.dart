@@ -1,8 +1,8 @@
 class Prompt {
   final String id;
-  final String title;
-  final String? description;
-  final String content;
+  String title;
+  String? description;
+  String content;
   final bool isPublic;
   final String? userId;
   final String? userName;

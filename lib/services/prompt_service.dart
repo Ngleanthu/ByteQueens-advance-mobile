@@ -30,7 +30,6 @@ class PromptService {
       // ⚠️ WARNING: Chỉ dùng cho development/testing
       print('🔧 Setting up SSL bypass...');
 
-      // Chỉ setup SSL bypass khi không phải web platform
       if (_dio.httpClientAdapter is IOHttpClientAdapter) {
         (_dio.httpClientAdapter as IOHttpClientAdapter).createHttpClient = () {
           final client = HttpClient();
@@ -42,12 +41,10 @@ class PromptService {
           return client;
         };
       } else {
-        // Web platform - không cần SSL bypass
         print('🌐 Running on web platform - SSL bypass not needed');
       }
     } catch (e) {
-      print('⚠️ SSL bypass setup failed: $e');
-      // Không throw error, để app vẫn chạy được
+      print('❌ Error setting up SSL bypass: $e');
     }
   }
 
@@ -229,6 +226,44 @@ class PromptService {
       await removeFavorite(promptId);
     } else {
       await addFavorite(promptId);
+    }
+  }
+
+  Future<void> deletePrompt(String promptId, {String? token}) async {
+    final actualToken =
+        token ?? _authService.getAccessToken() ?? _fallbackToken;
+
+    try {
+      await _dio.delete(
+        '/prompts/$promptId',
+        options: Options(headers: {'Authorization': 'Bearer $actualToken'}),
+      );
+    } on DioException catch (e) {
+      String msg = "Network error";
+      if (e.response != null) {
+        final d = e.response!.data;
+        msg = (d is Map && d['message'] != null) ? d['message'] : d.toString();
+      }
+      throw Exception(msg);
+    }
+  }
+
+  Future<void> updatePrompt(String promptId, {String? token}) async {
+    final actualToken =
+        token ?? _authService.getAccessToken() ?? _fallbackToken;
+
+    try {
+      await _dio.patch(
+        '/prompts/$promptId',
+        options: Options(headers: {'Authorization': 'Bearer $actualToken'}),
+      );
+    } on DioException catch (e) {
+      String msg = "Network error";
+      if (e.response != null) {
+        final d = e.response!.data;
+        msg = (d is Map && d['message'] != null) ? d['message'] : d.toString();
+      }
+      throw Exception(msg);
     }
   }
 }

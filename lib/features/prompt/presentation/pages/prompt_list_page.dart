@@ -2,9 +2,9 @@ import 'package:flutter/material.dart';
 import '../../../../data/models/prompt.dart';
 import '../widgets/prompt_item.dart';
 import '../widgets/create_prompt_dialog.dart';
+import '../widgets/edit_prompt_dialog.dart';
 import '../widgets/category_chip.dart';
 import '../../../../services/prompt_service.dart';
-import '../../../bot/presentation/pages/chat_page.dart';
 
 class PromptListPage extends StatefulWidget {
   const PromptListPage({Key? key}) : super(key: key);
@@ -85,11 +85,9 @@ class _PromptListPageState extends State<PromptListPage> {
         setState(() => p.isFavorite = !p.isFavorite);
       }
     } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('Error: $e')));
-      }
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Error: $e')));
     }
   }
 
@@ -263,212 +261,139 @@ class _PromptListPageState extends State<PromptListPage> {
             prompt: p,
             onToggleFavorite: () => _handleFavoriteToggle(p),
             onPreview: () => _showPreviewDialog(p),
-            onUse: () => _showPreviewDialog(p),
+            onUse: () => ScaffoldMessenger.of(
+              context,
+            ).showSnackBar(SnackBar(content: Text('Using: ${p.title}'))),
           );
         },
       ),
     );
   }
 
-  Future<void> _navigateToChatWithMessage(String message) async {
-    try {
-      print('🚀 Navigating to chat with message: $message');
-
-      await Navigator.of(context).push(
-        MaterialPageRoute(
-          builder: (context) => ChatPage(
-            initialMessage: message,
-            modelId: 'gpt-4o-mini',
-            modelName: 'GPT-4o Mini',
-          ),
-        ),
-      );
-
-      print('✅ Navigation completed');
-    } catch (e) {
-      print('❌ Navigation error: $e');
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Failed to open chat: $e'),
-            backgroundColor: Colors.red,
-          ),
-        );
-      }
-    }
-  }
-
   void _showPreviewDialog(Prompt p) {
-    // Extract all placeholders in [ ]
-    final regex = RegExp(r'\[([^\]]+)\]');
-    final matches = regex.allMatches(p.content);
-    final placeholders = matches.map((m) => m.group(1) ?? '').toList();
-
-    // Create controllers for each placeholder
-    final controllers = List.generate(
-      placeholders.length,
-      (_) => TextEditingController(),
-    );
-
     showDialog(
       context: context,
-      barrierDismissible: false,
-      builder: (dialogContext) => AlertDialog(
-        title: Text(
-          p.title,
-          style: const TextStyle(fontWeight: FontWeight.w600),
-        ),
+      builder: (dialogCtx) => AlertDialog(
+        title: Text(p.title),
         content: SingleChildScrollView(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisSize: MainAxisSize.min,
             children: [
-              // Description
-              if (p.description != null &&
-                  p.description!.trim().isNotEmpty) ...[
+              if (p.description != null) ...[
                 Text(
                   p.description!,
                   style: TextStyle(
                     color: Colors.grey[600],
                     fontStyle: FontStyle.italic,
-                    height: 1.3,
                   ),
                 ),
                 const SizedBox(height: 12),
                 const Divider(),
                 const SizedBox(height: 12),
               ],
-
-              // Prompt content preview
-              Text(
-                'Template:',
-                style: TextStyle(
-                  fontWeight: FontWeight.w600,
-                  color: Colors.grey[700],
-                  fontSize: 13,
-                ),
-              ),
-              const SizedBox(height: 8),
-              Container(
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: Colors.grey[100],
-                  borderRadius: BorderRadius.circular(8),
-                  border: Border.all(color: Colors.grey[300]!),
-                ),
-                child: Text(
-                  p.content,
-                  style: TextStyle(
-                    fontSize: 14,
-                    color: Colors.grey[800],
-                    height: 1.4,
-                  ),
-                ),
-              ),
-
-              if (placeholders.isNotEmpty) ...[
-                const SizedBox(height: 20),
-                Text(
-                  'Fill in the details:',
-                  style: TextStyle(
-                    fontWeight: FontWeight.w600,
-                    color: Colors.grey[700],
-                    fontSize: 13,
-                  ),
-                ),
-                const SizedBox(height: 12),
-              ],
-
-              // Create input fields for each placeholder
-              ...List.generate(placeholders.length, (index) {
-                return Padding(
-                  padding: const EdgeInsets.only(bottom: 16),
-                  child: TextField(
-                    controller: controllers[index],
-                    decoration: InputDecoration(
-                      labelText: placeholders[index],
-                      hintText: 'Enter ${placeholders[index].toLowerCase()}',
-                      border: const OutlineInputBorder(),
-                      filled: true,
-                      fillColor: Colors.white,
-                    ),
-                    maxLines: null,
-                    textInputAction: index == placeholders.length - 1
-                        ? TextInputAction.done
-                        : TextInputAction.next,
-                  ),
-                );
-              }),
-
-              if (placeholders.isEmpty) ...[
-                const SizedBox(height: 12),
-                Text(
-                  'This prompt has no fields to fill. Click "Send to Chat" to use it directly.',
-                  style: TextStyle(
-                    fontSize: 13,
-                    color: Colors.grey[600],
-                    fontStyle: FontStyle.italic,
-                  ),
-                ),
-              ],
+              Text(p.content),
             ],
           ),
         ),
+
+        // ★★★ Add actions based on isPublic ★★★
         actions: [
-          TextButton(
-            onPressed: () {
-              // Clean up controllers
-              for (var controller in controllers) {
-                controller.dispose();
-              }
-              Navigator.of(dialogContext).pop();
-            },
-            child: const Text('Close'),
-          ),
-          ElevatedButton.icon(
-            onPressed: () async {
-              // Build complete message by replacing placeholders
-              String finalMessage = p.content;
+          // nút edit và delete nếu là prompt của user (not public)
+          if (p.isPublic == false) ...[
+            IconButton(
+              icon: const Icon(Icons.edit, color: Colors.blue),
+              tooltip: "Edit",
+              onPressed: () async {
+                Navigator.pop(dialogCtx); // close preview dialog
 
-              print('📝 Original template: $finalMessage');
-              print('📋 Placeholders found: $placeholders');
+                // show EditPromptDialog, truyền prompt hiện tại
+                final updatedPrompt = await showDialog<Prompt>(
+                  context: context,
+                  builder: (_) => EditPromptDialog(prompt: p),
+                );
 
-              for (int i = 0; i < placeholders.length; i++) {
-                final value = controllers[i].text.trim();
-                print('  - [${placeholders[i]}] = "$value"');
-
-                if (value.isNotEmpty) {
-                  finalMessage = finalMessage.replaceFirst(
-                    '[${placeholders[i]}]',
-                    value,
+                // nếu người dùng save, cập nhật list
+                if (updatedPrompt != null && mounted) {
+                  setState(() {
+                    final index = _prompts.indexWhere(
+                      (item) => item.id == updatedPrompt.id,
+                    );
+                    if (index != -1) {
+                      _prompts[index] = updatedPrompt;
+                    }
+                  });
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text("Prompt updated successfully"),
+                    ),
                   );
                 }
-              }
-
-              print('✏️ Final message: $finalMessage');
-
-              // Clean up controllers
-              for (var controller in controllers) {
-                controller.dispose();
-              }
-
-              // Close dialog first
-              Navigator.of(dialogContext).pop();
-
-              // Small delay to ensure dialog is fully closed
-              await Future.delayed(const Duration(milliseconds: 200));
-
-              // Navigate to chat
-              if (mounted) {
-                await _navigateToChatWithMessage(finalMessage);
-              }
-            },
-            icon: const Icon(Icons.send),
-            label: const Text('Send to Chat'),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.blue,
-              foregroundColor: Colors.white,
+              },
             ),
+            IconButton(
+              icon: const Icon(Icons.delete, color: Colors.red),
+              tooltip: "Delete",
+              onPressed: () async {
+                // Close preview dialog first
+                Navigator.pop(dialogCtx);
+
+                // Show confirm dialog
+                final confirm = await showDialog<bool>(
+                  context: context,
+                  builder: (ctx2) => AlertDialog(
+                    title: const Text("Delete Prompt"),
+                    content: const Text(
+                      "Are you sure you want to delete this prompt?",
+                    ),
+                    actions: [
+                      TextButton(
+                        onPressed: () => Navigator.pop(ctx2, false),
+                        child: const Text("Cancel"),
+                      ),
+                      ElevatedButton(
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.red,
+                        ),
+                        onPressed: () => Navigator.pop(ctx2, true),
+                        child: const Text("Delete"),
+                      ),
+                    ],
+                  ),
+                );
+
+                // If user cancels, do nothing
+                if (confirm != true) return;
+
+                // Call API to delete
+                try {
+                  await _service.deletePrompt(p.id);
+
+                  if (!mounted) return; // check widget still mounted
+
+                  // Remove prompt from local list instead of reload full list
+                  setState(() {
+                    _prompts.removeWhere((item) => item.id == p.id);
+                  });
+
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text("Prompt deleted successfully"),
+                    ),
+                  );
+                } catch (e) {
+                  if (!mounted) return;
+                  ScaffoldMessenger.of(
+                    context,
+                  ).showSnackBar(SnackBar(content: Text("Delete failed: $e")));
+                }
+              },
+            ),
+          ],
+
+          // nút close
+          TextButton(
+            onPressed: () => Navigator.pop(dialogCtx),
+            child: const Text('Close'),
           ),
         ],
       ),
