@@ -9,8 +9,6 @@ import 'package:bytequeens_adm/features/bot/presentation/pages/bots_list_page.da
 import 'package:bytequeens_adm/features/bot/presentation/pages/create_bot_page.dart';
 import 'package:bytequeens_adm/features/bot/presentation/pages/bot_detail_page.dart';
 import 'package:bytequeens_adm/features/bot/presentation/pages/bot_preview_page.dart';
-import 'package:bytequeens_adm/features/bot/presentation/pages/chat_page.dart';
-import 'package:bytequeens_adm/features/bot/presentation/pages/chat_history_page.dart';
 import 'package:bytequeens_adm/features/group/presentation/pages/groups_list_page.dart';
 import 'package:bytequeens_adm/features/group/presentation/pages/create_group_page.dart';
 import 'package:bytequeens_adm/features/prompt/presentation/pages/prompt_list_page.dart';
