@@ -631,8 +631,11 @@ class _BotsListPageState extends State<BotsListPage> {
                   onPressed: () {
                     Navigator.pushNamed(
                       context,
-                      AppConstants.botPreviewRoute,
-                      arguments: bot.id,
+                      AppConstants.chatRoute,
+                      arguments: {
+                        'modelId': bot.id,
+                        'modelName': bot.name,
+                      },
                     );
                   },
                   icon: const Icon(Icons.chat, size: 18),
