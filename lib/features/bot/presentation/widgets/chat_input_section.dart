@@ -15,6 +15,8 @@ class ChatInputSection extends StatefulWidget {
   final VoidCallback? onCreateBot;
   final VoidCallback? onHistoryTap;
   final VoidCallback? onNewChat;
+  final Function()? onImageUpload;
+  final Function()? onCameraCapture;
   final String selectedModel;
   final int freeMessagesRemaining;
   final List<Bot> userBots;
@@ -27,6 +29,8 @@ class ChatInputSection extends StatefulWidget {
     this.onCreateBot,
     this.onHistoryTap,
     this.onNewChat,
+    this.onImageUpload,
+    this.onCameraCapture,
     this.selectedModel = 'GPT-4o Mini',
     this.freeMessagesRemaining = 45,
     this.userBots = const [],
@@ -363,8 +367,12 @@ class _ChatInputSectionState extends State<ChatInputSection> {
                         mainAxisSize: MainAxisSize.min,
                         children: [
                           const Icon(Icons.add, size: 16, color: Colors.white),
-                            const SizedBox(width: 4),
-                          const Icon(Icons.smart_toy, size: 16, color: Colors.white), // icon bot
+                          const SizedBox(width: 4),
+                          const Icon(
+                            Icons.smart_toy,
+                            size: 16,
+                            color: Colors.white,
+                          ), // icon bot
                           if (!isCompact) ...[
                             const SizedBox(width: 4),
                             const Text(
@@ -440,14 +448,33 @@ class _ChatInputSectionState extends State<ChatInputSection> {
             ),
             child: Row(
               children: [
-                // Attachment icon
+                // Image upload icon
                 Tooltip(
-                  message: 'Attach File',
+                  message: 'Upload Image',
                   child: IconButton(
-                    icon: Icon(Icons.attach_file, size: 20, color: iconColor),
+                    icon: Icon(
+                      Icons.image_outlined,
+                      size: 20,
+                      color: iconColor,
+                    ),
                     padding: const EdgeInsets.all(8),
                     constraints: const BoxConstraints(),
-                    onPressed: () {},
+                    onPressed: widget.onImageUpload,
+                  ),
+                ),
+
+                // Camera icon
+                Tooltip(
+                  message: 'Take Photo',
+                  child: IconButton(
+                    icon: Icon(
+                      Icons.camera_alt_outlined,
+                      size: 20,
+                      color: iconColor,
+                    ),
+                    padding: const EdgeInsets.all(8),
+                    constraints: const BoxConstraints(),
+                    onPressed: widget.onCameraCapture,
                   ),
                 ),
 
