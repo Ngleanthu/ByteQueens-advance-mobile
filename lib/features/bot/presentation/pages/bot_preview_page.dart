@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:bytequeens_adm/config/theme.dart';
 import 'package:bytequeens_adm/config/app_constants.dart';
 import 'package:bytequeens_adm/services/bot_service.dart';
+import 'package:bytequeens_adm/services/kb_chat_service.dart';
 import 'package:bytequeens_adm/data/models/bot.dart';
 
 class BotPreviewPage extends StatefulWidget {
@@ -15,12 +16,14 @@ class BotPreviewPage extends StatefulWidget {
 
 class _BotPreviewPageState extends State<BotPreviewPage> {
   final _botService = BotService();
+  final _chatService = KBChatService();
   final _messageController = TextEditingController();
   final _scrollController = ScrollController();
 
   Bot? _bot;
   bool _isLoading = true;
   bool _isSending = false;
+  bool _useRealApi = true; // Toggle for testing
 
   final List<ChatMessage> _messages = [];
 
@@ -47,10 +50,10 @@ class _BotPreviewPageState extends State<BotPreviewPage> {
         _isLoading = false;
       });
 
-      
       _addMessage(
         ChatMessage(
-          text: 'Hi! I\'m ${bot!.name}. ${bot.description ?? "I'm here to help you"}. How can I help you today?',
+          text:
+              'Hi! I\'m ${bot!.name}. ${bot.description ?? "I'm here to help you"}. How can I help you today?',
           isUser: false,
           timestamp: DateTime.now(),
         ),
@@ -58,9 +61,9 @@ class _BotPreviewPageState extends State<BotPreviewPage> {
     } catch (e) {
       setState(() => _isLoading = false);
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error loading bot: $e')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Error loading bot: $e')));
       }
     }
   }
@@ -70,7 +73,6 @@ class _BotPreviewPageState extends State<BotPreviewPage> {
       _messages.add(message);
     });
 
-    
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (_scrollController.hasClients) {
         _scrollController.animateTo(
@@ -86,29 +88,47 @@ class _BotPreviewPageState extends State<BotPreviewPage> {
     final text = _messageController.text.trim();
     if (text.isEmpty || _isSending) return;
 
-    
-    _addMessage(ChatMessage(
-      text: text,
-      isUser: true,
-      timestamp: DateTime.now(),
-    ));
+    // Add user message
+    _addMessage(
+      ChatMessage(text: text, isUser: true, timestamp: DateTime.now()),
+    );
 
     _messageController.clear();
     setState(() => _isSending = true);
 
-    
-    await Future.delayed(const Duration(seconds: 1));
+    try {
+      String response;
 
-    
-    String response = _generateMockResponse(text);
+      if (_useRealApi && _bot != null) {
+        // Use KB API
+        response = await _chatService.previewChat(
+          botId: _bot!.id,
+          message: text,
+        );
+      } else {
+        // Fallback to mock response
+        await Future.delayed(const Duration(seconds: 1));
+        response = _generateMockResponse(text);
+      }
 
-    _addMessage(ChatMessage(
-      text: response,
-      isUser: false,
-      timestamp: DateTime.now(),
-    ));
+      _addMessage(
+        ChatMessage(text: response, isUser: false, timestamp: DateTime.now()),
+      );
+    } catch (e) {
+      print('Error sending message: $e');
 
-    setState(() => _isSending = false);
+      // Show error message
+      _addMessage(
+        ChatMessage(
+          text:
+              'Sorry, I encountered an error: ${e.toString()}. Please try again.',
+          isUser: false,
+          timestamp: DateTime.now(),
+        ),
+      );
+    } finally {
+      setState(() => _isSending = false);
+    }
   }
 
   String _generateMockResponse(String userMessage) {
@@ -118,7 +138,8 @@ class _BotPreviewPageState extends State<BotPreviewPage> {
       return 'Hello! How can I assist you today?';
     } else if (lowerMessage.contains('help')) {
       return 'I\'m here to help! You can ask me about ${_bot?.name ?? 'topics'} based on my knowledge base.';
-    } else if (lowerMessage.contains('what') && lowerMessage.contains('expertise')) {
+    } else if (lowerMessage.contains('what') &&
+        lowerMessage.contains('expertise')) {
       return 'I have expertise in the areas covered by my knowledge base. Feel free to ask me specific questions!';
     } else if (lowerMessage.contains('knowledge')) {
       return 'My knowledge comes from ${_bot?.knowledgeSources.length ?? 0} source(s) that have been added to my knowledge base.';
@@ -127,15 +148,41 @@ class _BotPreviewPageState extends State<BotPreviewPage> {
     }
   }
 
+  /// Clear conversation and start new conversation
+  void _clearThread() {
+    if (_bot != null) {
+      _chatService.clearConversation(_bot!.id);
+    }
+    setState(() {
+      _messages.clear();
+    });
+    _loadBot(); // Reload welcome message
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Started new conversation'),
+        duration: Duration(seconds: 2),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final backgroundColor = isDark ? AppTheme.darkBackground : Colors.white;
+    final surfaceColor = isDark ? AppTheme.darkSurface : Colors.white;
+    final textColor = isDark ? AppTheme.lightText : AppTheme.darkBlue;
+    final subtitleColor = isDark
+        ? AppTheme.lightText.withValues(alpha: 0.7)
+        : Colors.grey[600]!;
+
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: backgroundColor,
       appBar: AppBar(
-        backgroundColor: Colors.white,
+        backgroundColor: surfaceColor,
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: AppTheme.darkBlue),
+          icon: Icon(Icons.arrow_back, color: textColor),
           onPressed: () => Navigator.pop(context),
         ),
         title: Row(
@@ -148,8 +195,8 @@ class _BotPreviewPageState extends State<BotPreviewPage> {
                 children: [
                   Text(
                     _bot?.name ?? 'Bot',
-                    style: const TextStyle(
-                      color: AppTheme.darkBlue,
+                    style: TextStyle(
+                      color: textColor,
                       fontSize: 16,
                       fontWeight: FontWeight.w600,
                     ),
@@ -159,7 +206,7 @@ class _BotPreviewPageState extends State<BotPreviewPage> {
                     AppConstants.previewMode,
                     style: TextStyle(
                       fontSize: 12,
-                      color: Colors.grey[600],
+                      color: subtitleColor,
                       fontWeight: FontWeight.normal,
                     ),
                   ),
@@ -169,131 +216,184 @@ class _BotPreviewPageState extends State<BotPreviewPage> {
           ],
         ),
         actions: [
-          IconButton(
-            icon: const Icon(Icons.refresh, color: AppTheme.darkBlue),
-            onPressed: () {
-              setState(() {
-                _messages.clear();
-              });
-              _loadBot();
+          // Clear thread button
+          PopupMenuButton<String>(
+            icon: Icon(Icons.more_vert, color: textColor),
+            onSelected: (value) {
+              if (value == 'clear') {
+                _clearThread();
+              } else if (value == 'toggle_api') {
+                setState(() {
+                  _useRealApi = !_useRealApi;
+                });
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text(
+                      _useRealApi ? 'Using KB API' : 'Using Mock responses',
+                    ),
+                    duration: const Duration(seconds: 2),
+                  ),
+                );
+              }
             },
+            itemBuilder: (context) => [
+              const PopupMenuItem(
+                value: 'clear',
+                child: Row(
+                  children: [
+                    Icon(Icons.refresh, size: 20),
+                    SizedBox(width: 8),
+                    Text('New Thread'),
+                  ],
+                ),
+              ),
+              PopupMenuItem(
+                value: 'toggle_api',
+                child: Row(
+                  children: [
+                    Icon(_useRealApi ? Icons.cloud_off : Icons.cloud, size: 20),
+                    SizedBox(width: 8),
+                    Text(_useRealApi ? 'Use Mock' : 'Use API'),
+                  ],
+                ),
+              ),
+            ],
           ),
         ],
       ),
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
-          : Column(
-              children: [
-                
-                Expanded(
-                  child: _messages.isEmpty
-                      ? _buildEmptyState()
-                      : ListView.builder(
-                          controller: _scrollController,
-                          padding: const EdgeInsets.all(16),
-                          itemCount: _messages.length,
-                          itemBuilder: (context, index) {
-                            final message = _messages[index];
-                            return _buildMessageBubble(message);
-                          },
-                        ),
-                ),
-
-                
-                if (_isSending)
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 16),
-                    child: Row(
-                      children: [
-                        CircleAvatar(
-                          radius: 16,
-                          backgroundColor: AppTheme.primaryBlue.withValues(alpha: 0.1),
-                          child: Icon(
-                            Icons.smart_toy,
-                            size: 18,
-                            color: AppTheme.primaryBlue,
-                          ),
-                        ),
-                        const SizedBox(width: 12),
-                        Container(
-                          padding: const EdgeInsets.all(12),
-                          decoration: BoxDecoration(
-                            color: Colors.grey[100],
-                            borderRadius: BorderRadius.circular(18),
-                          ),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              _buildTypingDot(),
-                              const SizedBox(width: 4),
-                              _buildTypingDot(delay: 200),
-                              const SizedBox(width: 4),
-                              _buildTypingDot(delay: 400),
-                            ],
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-
-                const SizedBox(height: 8),
-
-                
-                Container(
-                  padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withValues(alpha: 0.05),
-                        blurRadius: 4,
-                        offset: const Offset(0, -2),
-                      ),
-                    ],
-                  ),
-                  child: Row(
-                    children: [
-                      Expanded(
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 16),
-                          decoration: BoxDecoration(
-                            color: Colors.grey[100],
-                            borderRadius: BorderRadius.circular(24),
-                          ),
-                          child: TextField(
-                            controller: _messageController,
-                            decoration: InputDecoration(
-                              hintText: AppConstants.askMeAnything,
-                              hintStyle: TextStyle(
-                                fontSize: 14,
-                                color: Colors.grey[400],
-                              ),
-                              border: InputBorder.none,
+          : Center(
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 900),
+                child: Column(
+                  children: [
+                    Expanded(
+                      child: _messages.isEmpty
+                          ? _buildEmptyState()
+                          : ListView.builder(
+                              controller: _scrollController,
+                              padding: const EdgeInsets.all(16),
+                              itemCount: _messages.length,
+                              itemBuilder: (context, index) {
+                                final message = _messages[index];
+                                return _buildMessageBubble(message);
+                              },
                             ),
-                            onSubmitted: (_) => _sendMessage(),
-                            maxLines: null,
+                    ),
+
+                    if (_isSending)
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 16),
+                        child: Row(
+                          children: [
+                            CircleAvatar(
+                              radius: 16,
+                              backgroundColor: AppTheme.primaryBlue.withValues(
+                                alpha: 0.1,
+                              ),
+                              child: Icon(
+                                Icons.smart_toy,
+                                size: 18,
+                                color: AppTheme.primaryBlue,
+                              ),
+                            ),
+                            const SizedBox(width: 12),
+                            Container(
+                              padding: const EdgeInsets.all(12),
+                              decoration: BoxDecoration(
+                                color: isDark
+                                    ? AppTheme.darkCard
+                                    : Colors.grey[100],
+                                borderRadius: BorderRadius.circular(18),
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  _buildTypingDot(),
+                                  const SizedBox(width: 4),
+                                  _buildTypingDot(delay: 200),
+                                  const SizedBox(width: 4),
+                                  _buildTypingDot(delay: 400),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+
+                    const SizedBox(height: 8),
+
+                    Container(
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        color: surfaceColor,
+                        boxShadow: [
+                          BoxShadow(
+                            color: isDark
+                                ? Colors.black.withValues(alpha: 0.3)
+                                : Colors.black.withValues(alpha: 0.05),
+                            blurRadius: 4,
+                            offset: const Offset(0, -2),
                           ),
-                        ),
+                        ],
                       ),
-                      const SizedBox(width: 8),
-                      IconButton(
-                        onPressed: _sendMessage,
-                        icon: Icon(
-                          Icons.send,
-                          color: _messageController.text.trim().isEmpty
-                              ? Colors.grey
-                              : AppTheme.primaryBlue,
-                        ),
+                      child: Row(
+                        children: [
+                          Expanded(
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 16,
+                              ),
+                              decoration: BoxDecoration(
+                                color: isDark
+                                    ? AppTheme.darkCard
+                                    : Colors.grey[100],
+                                borderRadius: BorderRadius.circular(24),
+                              ),
+                              child: TextField(
+                                controller: _messageController,
+                                style: TextStyle(color: textColor),
+                                decoration: InputDecoration(
+                                  hintText: AppConstants.askMeAnything,
+                                  hintStyle: TextStyle(
+                                    fontSize: 14,
+                                    color: isDark
+                                        ? AppTheme.lightText.withValues(
+                                            alpha: 0.5,
+                                          )
+                                        : Colors.grey[400],
+                                  ),
+                                  border: InputBorder.none,
+                                ),
+                                onSubmitted: (_) => _sendMessage(),
+                                maxLines: null,
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          IconButton(
+                            onPressed: _sendMessage,
+                            icon: Icon(
+                              Icons.send,
+                              color: _messageController.text.trim().isEmpty
+                                  ? (isDark ? Colors.grey[600] : Colors.grey)
+                                  : AppTheme.primaryBlue,
+                            ),
+                          ),
+                        ],
                       ),
-                    ],
-                  ),
+                    ),
+                  ],
                 ),
-              ],
+              ),
             ),
     );
   }
 
   Widget _buildEmptyState() {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     return Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
@@ -301,14 +401,14 @@ class _BotPreviewPageState extends State<BotPreviewPage> {
           Icon(
             Icons.chat_bubble_outline,
             size: 64,
-            color: Colors.grey[300],
+            color: isDark ? Colors.grey[700] : Colors.grey[300],
           ),
           const SizedBox(height: 16),
           Text(
             AppConstants.startConversation,
             style: TextStyle(
               fontSize: 16,
-              color: Colors.grey[600],
+              color: isDark ? Colors.grey[400] : Colors.grey[600],
             ),
           ),
         ],
@@ -317,6 +417,8 @@ class _BotPreviewPageState extends State<BotPreviewPage> {
   }
 
   Widget _buildMessageBubble(ChatMessage message) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     return Padding(
       padding: const EdgeInsets.only(bottom: 16),
       child: Row(
@@ -345,7 +447,7 @@ class _BotPreviewPageState extends State<BotPreviewPage> {
                   decoration: BoxDecoration(
                     color: message.isUser
                         ? AppTheme.primaryBlue
-                        : Colors.grey[100],
+                        : (isDark ? AppTheme.darkCard : Colors.grey[100]),
                     borderRadius: BorderRadius.circular(18).copyWith(
                       topLeft: message.isUser
                           ? const Radius.circular(18)
@@ -359,7 +461,9 @@ class _BotPreviewPageState extends State<BotPreviewPage> {
                     message.text,
                     style: TextStyle(
                       fontSize: 14,
-                      color: message.isUser ? Colors.white : AppTheme.darkBlue,
+                      color: message.isUser
+                          ? Colors.white
+                          : (isDark ? AppTheme.lightText : AppTheme.darkBlue),
                       height: 1.4,
                     ),
                   ),
@@ -369,7 +473,7 @@ class _BotPreviewPageState extends State<BotPreviewPage> {
                   _formatTimestamp(message.timestamp),
                   style: TextStyle(
                     fontSize: 11,
-                    color: Colors.grey[500],
+                    color: isDark ? Colors.grey[600] : Colors.grey[500],
                   ),
                 ),
               ],
@@ -379,11 +483,13 @@ class _BotPreviewPageState extends State<BotPreviewPage> {
             const SizedBox(width: 12),
             CircleAvatar(
               radius: 16,
-              backgroundColor: Colors.green[100],
+              backgroundColor: isDark
+                  ? Colors.green[900]!.withValues(alpha: 0.3)
+                  : Colors.green[100],
               child: Text(
                 'U',
                 style: TextStyle(
-                  color: Colors.green[700],
+                  color: isDark ? Colors.green[300] : Colors.green[700],
                   fontWeight: FontWeight.bold,
                   fontSize: 14,
                 ),
@@ -396,6 +502,8 @@ class _BotPreviewPageState extends State<BotPreviewPage> {
   }
 
   Widget _buildTypingDot({int delay = 0}) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     return TweenAnimationBuilder<double>(
       tween: Tween(begin: 0.0, end: 1.0),
       duration: const Duration(milliseconds: 600),
@@ -404,7 +512,9 @@ class _BotPreviewPageState extends State<BotPreviewPage> {
           width: 6,
           height: 6,
           decoration: BoxDecoration(
-            color: Colors.grey.withValues(alpha: 0.3 + (value * 0.4)),
+            color: isDark
+                ? AppTheme.lightText.withValues(alpha: 0.2 + (value * 0.3))
+                : Colors.grey.withValues(alpha: 0.3 + (value * 0.4)),
             shape: BoxShape.circle,
           ),
         );
