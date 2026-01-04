@@ -6,13 +6,19 @@ class ModernDropdown extends StatelessWidget {
   final String value;
   final List<String> items;
   final ValueChanged<String> onChanged;
+  final Map<String, String>? displayNames;
 
   const ModernDropdown({
     super.key,
     required this.value,
     required this.items,
     required this.onChanged,
+    this.displayNames,
   });
+
+  String _getDisplayName(String value) {
+    return displayNames?[value] ?? value.capitalize();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -48,8 +54,10 @@ class ModernDropdown extends StatelessWidget {
             borderRadius: BorderRadius.circular(12),
             items: items
                 .map(
-                  (e) =>
-                      DropdownMenuItem(value: e, child: Text(e.capitalize())),
+                  (e) => DropdownMenuItem(
+                    value: e,
+                    child: Text(_getDisplayName(e)),
+                  ),
                 )
                 .toList(),
             onChanged: (v) => onChanged(v!),

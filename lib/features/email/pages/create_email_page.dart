@@ -3,7 +3,9 @@ import '../widgets/email_input_field.dart';
 import '../widgets/email_section.dart';
 import '../widgets/segmented_control.dart';
 import '../widgets/modern_dropdown.dart';
-import '../theme/app_colors.dart';
+import '../widgets/email_draft_dialog.dart';
+import '../../../services/create_email_service.dart';
+import '../../../data/models/email_model.dart';
 
 class CreateEmailPage extends StatefulWidget {
   const CreateEmailPage({super.key});
@@ -20,10 +22,20 @@ class _CreateEmailPageState extends State<CreateEmailPage> {
   final _senderCtrl = TextEditingController();
   final _receiverCtrl = TextEditingController();
 
+  late final EmailService _emailService;
+  bool _isGenerating = false;
+
   String length = "long";
   String formality = "neutral";
   String tone = "friendly";
   String language = "vietnamese";
+  String model = "claude-3-sonnet-20240229";
+
+  @override
+  void initState() {
+    super.initState();
+    _emailService = EmailService();
+  }
 
   @override
   void dispose() {
@@ -36,42 +48,130 @@ class _CreateEmailPageState extends State<CreateEmailPage> {
     super.dispose();
   }
 
-  void _onGenerate() {
-    final payload = {
-      "mainIdea": _mainIdeaCtrl.text,
-      "action": _actionCtrl.text,
-      "email": _emailCtrl.text,
-      "metadata": {
-        "subject": _subjectCtrl.text,
-        "sender": _senderCtrl.text,
-        "receiver": _receiverCtrl.text,
-        "style": {"length": length, "formality": formality, "tone": tone},
-        "language": language,
-      },
-    };
+  Future<void> _onGenerate() async {
+    // Validation
+    if (_mainIdeaCtrl.text.isEmpty && _emailCtrl.text.isEmpty) {
+      _showErrorSnackBar("Please enter main idea or original email");
+      return;
+    }
 
-    debugPrint(payload.toString());
-    // TODO: call API
+    setState(() => _isGenerating = true);
+
+    try {
+      final response = await _emailService.generateEmail(
+        model: model,
+        email: _emailCtrl.text,
+        action: _actionCtrl.text,
+        mainIdea: _mainIdeaCtrl.text,
+        metadata: EmailMetadata(
+          subject: _subjectCtrl.text,
+          sender: _senderCtrl.text,
+          receiver: _receiverCtrl.text,
+          style: EmailStyle(length: length, formality: formality, tone: tone),
+          language: language,
+        ),
+      );
+
+      if (mounted) {
+        _showEmailDraftDialog(response);
+      }
+    } on ApiException catch (e) {
+      if (mounted) {
+        _showErrorSnackBar(e.message);
+      }
+    } catch (e) {
+      if (mounted) {
+        _showErrorSnackBar("Error: $e");
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isGenerating = false);
+      }
+    }
+  }
+
+  void _showErrorSnackBar(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Row(
+          children: [
+            const Icon(Icons.error_outline, color: Colors.white),
+            const SizedBox(width: 8),
+            Expanded(child: Text(message)),
+          ],
+        ),
+        backgroundColor: Colors.red,
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        duration: const Duration(seconds: 4),
+      ),
+    );
+  }
+
+  void _showEmailDraftDialog(EmailResponse response) {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => EmailDraftDialog(
+        subject: response.subject.isEmpty
+            ? (_subjectCtrl.text.isEmpty
+                  ? "RE: ${_emailCtrl.text.split('\n').first}"
+                  : _subjectCtrl.text)
+            : response.subject,
+        sender: response.sender.isEmpty
+            ? (_senderCtrl.text.isEmpty ? "you@example.com" : _senderCtrl.text)
+            : response.sender,
+        receiver: response.receiver.isEmpty
+            ? (_receiverCtrl.text.isEmpty
+                  ? "recipient@example.com"
+                  : _receiverCtrl.text)
+            : response.receiver,
+        generatedContent: response.content,
+        onSend: () {
+          Navigator.pop(context);
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Row(
+                children: const [
+                  Icon(Icons.check_circle, color: Colors.white),
+                  SizedBox(width: 8),
+                  Text("Email sent successfully!"),
+                ],
+              ),
+              backgroundColor: const Color(0xFF10B981),
+              behavior: SnackBarBehavior.floating,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+            ),
+          );
+        },
+        onEdit: () {
+          Navigator.pop(context);
+          // TODO: Implement edit functionality
+        },
+      ),
+    );
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppColors.backgroundWhite,
+      backgroundColor: const Color(0xFFFAFBFF),
       appBar: AppBar(
         elevation: 0,
-        backgroundColor: AppColors.cardWhite,
+        backgroundColor: Colors.white,
         centerTitle: true,
         title: const Text(
           "Create Email",
           style: TextStyle(
-            color: AppColors.textDark,
+            color: Color(0xFF1A1D2E),
             fontWeight: FontWeight.w600,
             fontSize: 18,
             letterSpacing: 0.3,
           ),
         ),
-        iconTheme: const IconThemeData(color: AppColors.primaryBlue),
+        iconTheme: const IconThemeData(color: Color(0xFF2196F3)),
         shadowColor: Colors.black.withOpacity(0.05),
       ),
       body: Column(
@@ -80,6 +180,29 @@ class _CreateEmailPageState extends State<CreateEmailPage> {
             child: ListView(
               padding: const EdgeInsets.all(20),
               children: [
+                EmailSection(
+                  title: "AI Model",
+                  child: ModernDropdown(
+                    value: model,
+                    items: const [
+                      "claude-3-haiku-20240307",
+                      "claude-3-sonnet-20240229",
+                      "gemini-1.5-flash-latest",
+                      "gemini-1.5-pro-latest",
+                      "gpt-4o",
+                      "gpt-4o-mini",
+                    ],
+                    onChanged: (v) => setState(() => model = v),
+                    displayNames: const {
+                      "claude-3-haiku-20240307": "Claude 3 Haiku",
+                      "claude-3-sonnet-20240229": "Claude 3 Sonnet",
+                      "gemini-1.5-flash-latest": "Gemini 1.5 Flash",
+                      "gemini-1.5-pro-latest": "Gemini 1.5 Pro",
+                      "gpt-4o": "GPT-4O",
+                      "gpt-4o-mini": "GPT-4O Mini",
+                    },
+                  ),
+                ),
                 EmailSection(
                   title: "Main Idea",
                   child: EmailInputField(
@@ -167,7 +290,7 @@ class _CreateEmailPageState extends State<CreateEmailPage> {
             child: Container(
               padding: const EdgeInsets.fromLTRB(20, 12, 20, 20),
               decoration: BoxDecoration(
-                color: AppColors.cardWhite,
+                color: Colors.white,
                 boxShadow: [
                   BoxShadow(
                     color: Colors.black.withOpacity(0.05),
@@ -177,36 +300,60 @@ class _CreateEmailPageState extends State<CreateEmailPage> {
                 ],
               ),
               child: Material(
-                color: AppColors.primaryBlue,
+                color: const Color(0xFF2196F3),
                 borderRadius: BorderRadius.circular(14),
                 elevation: 4,
-                shadowColor: AppColors.primaryBlue.withOpacity(0.4),
+                shadowColor: const Color(0xFF2196F3).withOpacity(0.4),
                 child: InkWell(
-                  onTap: _onGenerate,
+                  onTap: _isGenerating ? null : _onGenerate,
                   borderRadius: BorderRadius.circular(14),
                   child: Container(
                     width: double.infinity,
                     padding: const EdgeInsets.symmetric(vertical: 16),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: const [
-                        Icon(
-                          Icons.auto_awesome_rounded,
-                          color: Colors.white,
-                          size: 22,
-                        ),
-                        SizedBox(width: 10),
-                        Text(
-                          "Generate Email",
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontSize: 16,
-                            fontWeight: FontWeight.w600,
-                            letterSpacing: 0.5,
+                    child: _isGenerating
+                        ? Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: const [
+                              SizedBox(
+                                width: 20,
+                                height: 20,
+                                child: CircularProgressIndicator(
+                                  color: Colors.white,
+                                  strokeWidth: 2,
+                                ),
+                              ),
+                              SizedBox(width: 12),
+                              Text(
+                                "Generating...",
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w600,
+                                  letterSpacing: 0.5,
+                                ),
+                              ),
+                            ],
+                          )
+                        : Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: const [
+                              Icon(
+                                Icons.auto_awesome_rounded,
+                                color: Colors.white,
+                                size: 22,
+                              ),
+                              SizedBox(width: 10),
+                              Text(
+                                "Generate Email",
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w600,
+                                  letterSpacing: 0.5,
+                                ),
+                              ),
+                            ],
                           ),
-                        ),
-                      ],
-                    ),
                   ),
                 ),
               ),
