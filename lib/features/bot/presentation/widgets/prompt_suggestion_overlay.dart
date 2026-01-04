@@ -10,11 +10,11 @@ class PromptSuggestionOverlay extends StatefulWidget {
   final Function(String content)? onPromptSelected;
 
   const PromptSuggestionOverlay({
-    Key? key,
+    super.key,
     required this.child,
     required this.messageController,
     this.onPromptSelected,
-  }) : super(key: key);
+  });
 
   @override
   State<PromptSuggestionOverlay> createState() =>

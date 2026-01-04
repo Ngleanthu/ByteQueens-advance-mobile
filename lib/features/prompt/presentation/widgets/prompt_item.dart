@@ -8,12 +8,12 @@ class PromptItem extends StatelessWidget {
   final VoidCallback onUse;
 
   const PromptItem({
-    Key? key,
+    super.key,
     required this.prompt,
     required this.onToggleFavorite,
     required this.onPreview,
     required this.onUse,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {

@@ -25,8 +25,7 @@ class ChatHistory {
 class ChatHistoryPage extends StatefulWidget {
   final String? currentConversationId;
 
-  const ChatHistoryPage({Key? key, this.currentConversationId})
-    : super(key: key);
+  const ChatHistoryPage({super.key, this.currentConversationId});
 
   @override
   State<ChatHistoryPage> createState() => _ChatHistoryPageState();

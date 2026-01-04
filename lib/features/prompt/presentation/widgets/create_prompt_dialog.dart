@@ -3,7 +3,7 @@ import '../../../../services/prompt_service.dart';
 import '../../../../data/models/prompt.dart';
 
 class CreatePromptDialog extends StatefulWidget {
-  const CreatePromptDialog({Key? key}) : super(key: key);
+  const CreatePromptDialog({super.key});
 
   @override
   State<CreatePromptDialog> createState() => _CreatePromptDialogState();

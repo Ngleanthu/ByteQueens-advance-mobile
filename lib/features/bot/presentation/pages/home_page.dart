@@ -14,7 +14,7 @@ import 'package:bytequeens_adm/features/bot/presentation/pages/chat_page.dart';
 import 'package:bytequeens_adm/features/bot/presentation/pages/chat_history_page.dart';
 
 class HomePage extends StatefulWidget {
-  const HomePage({Key? key}) : super(key: key);
+  const HomePage({super.key});
 
   @override
   State<HomePage> createState() => _HomePageState();
@@ -103,6 +103,17 @@ class _HomePageState extends State<HomePage> {
                 onTap: () {
                   Navigator.pop(context);
                   // Already on home, so just close menu
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.email, color: Colors.white),
+                title: const Text(
+                  'Create Email',
+                  style: TextStyle(color: Colors.white),
+                ),
+                onTap: () {
+                  Navigator.pop(context);
+                  Navigator.pushNamed(context, AppConstants.createEmailRoute);
                 },
               ),
               ListTile(
@@ -371,8 +382,7 @@ class _HomePageState extends State<HomePage> {
                                           RichText(
                                             text: TextSpan(
                                               text:
-                                                  AppConstants.orInviteFriends +
-                                                  ' ',
+                                                  '${AppConstants.orInviteFriends} ',
                                               style: TextStyle(
                                                 fontSize: 14,
                                                 color: isDark

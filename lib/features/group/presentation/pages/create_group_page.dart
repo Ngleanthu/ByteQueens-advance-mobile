@@ -21,7 +21,7 @@ class _CreateGroupPageState extends State<CreateGroupPage> {
   final _descriptionController = TextEditingController();
 
   List<User> _availableUsers = [];
-  List<User> _selectedMembers = [];
+  final List<User> _selectedMembers = [];
   bool _isLoading = false;
 
   @override

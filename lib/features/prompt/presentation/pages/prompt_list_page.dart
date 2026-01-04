@@ -7,7 +7,7 @@ import '../widgets/category_chip.dart';
 import '../../../../services/prompt_service.dart';
 
 class PromptListPage extends StatefulWidget {
-  const PromptListPage({Key? key}) : super(key: key);
+  const PromptListPage({super.key});
 
   @override
   State<PromptListPage> createState() => _PromptListPageState();

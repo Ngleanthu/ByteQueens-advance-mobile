@@ -39,23 +39,22 @@ class ChatPage extends StatefulWidget {
   final String? chatId;
 
   const ChatPage({
-    Key? key,
+    super.key,
     required this.initialMessage,
     required this.modelId,
     required this.modelName,
     this.existingMessages,
     this.chatId,
-  }) : super(key: key);
+  });
 
   // Named constructor for loading chat history
   const ChatPage.withHistory({
-    Key? key,
+    super.key,
     required this.chatId,
     required this.existingMessages,
     required this.modelName,
   }) : initialMessage = '',
-       modelId = 'gpt-4o-mini',
-       super(key: key);
+       modelId = 'gpt-4o-mini';
 
   @override
   State<ChatPage> createState() => _ChatPageState();

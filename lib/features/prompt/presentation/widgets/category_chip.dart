@@ -5,10 +5,10 @@ class CategoryChipsWidget extends StatelessWidget {
   final Function(String) onCategorySelected;
 
   const CategoryChipsWidget({
-    Key? key,
+    super.key,
     required this.selectedCategory,
     required this.onCategorySelected,
-  }) : super(key: key);
+  });
 
   static const List<Map<String, String>> categories = [
     {'value': 'all', 'label': 'All'},
