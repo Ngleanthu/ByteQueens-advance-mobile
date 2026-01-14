@@ -344,7 +344,7 @@ class _EmailLoginPageState extends State<EmailLoginPage> {
                           height: 1.5,
                         ),
                         children: [
-                          const TextSpan(text: AppConstants.termsText + '\n'),
+                          const TextSpan(text: '${AppConstants.termsText}\n'),
                           WidgetSpan(
                             child: GestureDetector(
                               onTap: () {},

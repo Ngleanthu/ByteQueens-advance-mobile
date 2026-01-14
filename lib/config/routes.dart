@@ -1,3 +1,4 @@
+import 'package:bytequeens_adm/features/email/pages/create_email_page.dart';
 import 'package:flutter/material.dart';
 import 'package:bytequeens_adm/config/app_constants.dart';
 import 'package:bytequeens_adm/features/splash/presentation/pages/splash_page.dart';
@@ -9,8 +10,6 @@ import 'package:bytequeens_adm/features/bot/presentation/pages/bots_list_page.da
 import 'package:bytequeens_adm/features/bot/presentation/pages/create_bot_page.dart';
 import 'package:bytequeens_adm/features/bot/presentation/pages/bot_detail_page.dart';
 import 'package:bytequeens_adm/features/bot/presentation/pages/bot_preview_page.dart';
-import 'package:bytequeens_adm/features/bot/presentation/pages/chat_page.dart';
-import 'package:bytequeens_adm/features/bot/presentation/pages/chat_history_page.dart';
 import 'package:bytequeens_adm/features/group/presentation/pages/groups_list_page.dart';
 import 'package:bytequeens_adm/features/group/presentation/pages/create_group_page.dart';
 import 'package:bytequeens_adm/features/prompt/presentation/pages/prompt_list_page.dart';
@@ -29,6 +28,7 @@ class AppRoutes {
     AppConstants.groupsListRoute: (context) => const GroupsListPage(),
     AppConstants.createGroupRoute: (context) => const CreateGroupPage(),
     AppConstants.promptListRoute: (context) => const PromptListPage(),
+    AppConstants.createEmailRoute: (context) => const CreateEmailPage(),
   };
 
   static Route<dynamic>? onGenerateRoute(RouteSettings settings) {
@@ -91,6 +91,11 @@ class AppRoutes {
         }
         return MaterialPageRoute(
           builder: (context) => BotPreviewPage(botId: botId),
+          settings: settings,
+        );
+      case AppConstants.createEmailRoute:
+        return MaterialPageRoute(
+          builder: (context) => const SignUpPage(),
           settings: settings,
         );
       default:

@@ -8,8 +8,7 @@ class LeftMenuDrawer extends StatelessWidget {
   final bool isExpanded;
   final VoidCallback? onToggle;
 
-  const LeftMenuDrawer({Key? key, this.isExpanded = true, this.onToggle})
-    : super(key: key);
+  const LeftMenuDrawer({super.key, this.isExpanded = true, this.onToggle});
 
   @override
   Widget build(BuildContext context) {
@@ -112,6 +111,14 @@ class LeftMenuDrawer extends StatelessWidget {
                     label: 'Chat',
                     isSelected: true,
                     onTap: () {},
+                  ),
+                  _buildMenuItem(
+                    context,
+                    icon: Icons.smart_toy,
+                    label: AppConstants.myBots,
+                    onTap: () {
+                      Navigator.pushNamed(context, AppConstants.botsListRoute);
+                    },
                   ),
                   _buildMenuItem(
                     context,

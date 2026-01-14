@@ -11,9 +11,9 @@ class BotService {
   
   final List<Bot> _bots = [];
   
-  String _currentUserId = 'user_001';
-  String _currentUserName = 'Nguyễn Lê Anh Thư';
-  String _currentUserEmail = 'ngleanth@gmail.com';
+  final String _currentUserId = 'user_001';
+  final String _currentUserName = 'Nguyễn Lê Anh Thư';
+  final String _currentUserEmail = 'ngleanth@gmail.com';
 
   
   Future<List<Bot>> getAllBots() async {

@@ -19,7 +19,7 @@ class _CreateBotPageState extends State<CreateBotPage> {
   final _botService = BotService();
 
   AIModel _selectedModel = AIModel.gpt4oMini;
-  List<KnowledgeSource> _knowledgeSources = [];
+  final List<KnowledgeSource> _knowledgeSources = [];
   bool _isLoading = false;
 
   @override
@@ -417,7 +417,7 @@ class _CreateBotPageState extends State<CreateBotPage> {
                     ],
                   ),
                 );
-              }).toList(),
+              }),
 
             // Add knowledge source button
             OutlinedButton.icon(
