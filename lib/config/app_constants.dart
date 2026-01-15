@@ -70,6 +70,9 @@ class AppConstants {
 
   //Routes - Prompts
   static const String promptListRoute = '/prompts';
+
+  //Routes - Create Email
+  static const String createEmailRoute = '/emails';
   // Messages - Auth
   static const String loginPrompt = 'Log in to get 50 free Credits every day';
   static const String loginWithEmail = 'Log in with Email';
@@ -344,7 +347,8 @@ class AppConstants {
   static const String about = 'About';
   static const String version = 'Version';
   static const String logoutConfirm = 'Are you sure you want to logout?';
-
+  //Email
+  static const String createEmail = "Create Email";
   // Mock Data (for demo)
   static const String mockEmail = 'test@jarvis.com';
   static const String mockPassword = '12345678';

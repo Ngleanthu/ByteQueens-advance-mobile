@@ -1,3 +1,4 @@
+import 'package:bytequeens_adm/features/email/pages/create_email_page.dart';
 import 'package:flutter/material.dart';
 import 'package:bytequeens_adm/config/app_constants.dart';
 import 'package:bytequeens_adm/features/splash/presentation/pages/splash_page.dart';
@@ -28,6 +29,7 @@ class AppRoutes {
     AppConstants.groupsListRoute: (context) => const GroupsListPage(),
     AppConstants.createGroupRoute: (context) => const CreateGroupPage(),
     AppConstants.promptListRoute: (context) => const PromptListPage(),
+    AppConstants.createEmailRoute: (context) => const CreateEmailPage(),
   };
 
   static Route<dynamic>? onGenerateRoute(RouteSettings settings) {
@@ -94,10 +96,13 @@ class AppRoutes {
         );
       case AppConstants.chatRoute:
         final args = settings.arguments as Map<String, dynamic>?;
-        if (args == null || args['modelId'] == null || args['modelName'] == null) {
+        if (args == null ||
+            args['modelId'] == null ||
+            args['modelName'] == null) {
           return MaterialPageRoute(
-            builder: (context) =>
-                const Scaffold(body: Center(child: Text('Model information required'))),
+            builder: (context) => const Scaffold(
+              body: Center(child: Text('Model information required')),
+            ),
           );
         }
         return MaterialPageRoute(
@@ -106,6 +111,11 @@ class AppRoutes {
             modelId: args['modelId'] as String,
             modelName: args['modelName'] as String,
           ),
+          settings: settings,
+        );
+      case AppConstants.createEmailRoute:
+        return MaterialPageRoute(
+          builder: (context) => const SignUpPage(),
           settings: settings,
         );
       default:

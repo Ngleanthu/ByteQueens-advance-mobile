@@ -23,7 +23,7 @@ class ChatInputSection extends StatefulWidget {
   final Function(String modelId, String modelName)? onModelChanged;
 
   const ChatInputSection({
-    Key? key,
+    super.key,
     required this.messageController,
     this.onSendMessage,
     this.onCreateBot,
@@ -35,7 +35,7 @@ class ChatInputSection extends StatefulWidget {
     this.freeMessagesRemaining = 45,
     this.userBots = const [],
     this.onModelChanged,
-  }) : super(key: key);
+  });
 
   @override
   State<ChatInputSection> createState() => _ChatInputSectionState();

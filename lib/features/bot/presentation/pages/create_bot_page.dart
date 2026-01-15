@@ -20,8 +20,8 @@ class _CreateBotPageState extends State<CreateBotPage> {
   final _instructionsController = TextEditingController();
   final _botService = BotService();
 
-  AIModel _selectedModel = AIModel.gpt4o; // Only GPT-4o is available
-  List<KnowledgeSource> _knowledgeSources = [];
+  AIModel _selectedModel = AIModel.gpt4oMini;
+  final List<KnowledgeSource> _knowledgeSources = [];
   bool _isLoading = false;
 
   @override
@@ -88,12 +88,6 @@ class _CreateBotPageState extends State<CreateBotPage> {
   void _showModelSelector() {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
-    // Only GPT-4o is available - other models are hidden
-    final availableModels = [
-      {'name': 'GPT-4o', 'enum': AIModel.gpt4o},
-      // Other models hidden: Claude, Gemini, GPT-4o Mini
-    ];
-
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -156,10 +150,9 @@ class _CreateBotPageState extends State<CreateBotPage> {
             Expanded(
               child: ListView.builder(
                 padding: const EdgeInsets.symmetric(vertical: 4),
-                itemCount: availableModels.length,
+                itemCount: AIModel.values.length,
                 itemBuilder: (context, index) {
-                  final modelData = availableModels[index];
-                  final model = modelData['enum'] as AIModel;
+                  final model = AIModel.values[index];
                   final isSelected = _selectedModel == model;
 
                   return ListTile(
@@ -167,16 +160,13 @@ class _CreateBotPageState extends State<CreateBotPage> {
                       horizontal: 16,
                       vertical: 4,
                     ),
-                    leading: CircleAvatar(
-                      backgroundColor: AppTheme.primaryBlue.withOpacity(0.1),
-                      child: const Icon(
-                        Icons.psychology_outlined,
-                        color: AppTheme.primaryBlue,
-                        size: 20,
-                      ),
+                    leading: Icon(
+                      Icons.psychology,
+                      color: _getModelColor(model),
+                      size: 28,
                     ),
                     title: Text(
-                      modelData['name'] as String,
+                      model.displayName,
                       style: TextStyle(
                         fontWeight: FontWeight.w500,
                         fontSize: 15,
@@ -184,7 +174,7 @@ class _CreateBotPageState extends State<CreateBotPage> {
                       ),
                     ),
                     subtitle: Text(
-                      model.description.split('\n').last,
+                      model.description.split('\n').first,
                       style: TextStyle(
                         fontSize: 12,
                         color: isDark ? Colors.grey[400] : Colors.grey[600],
@@ -208,6 +198,21 @@ class _CreateBotPageState extends State<CreateBotPage> {
         ),
       ),
     );
+  }
+
+  Color _getModelColor(AIModel model) {
+    switch (model.iconColor) {
+      case 'black':
+        return Colors.black;
+      case 'blue':
+        return Colors.blue;
+      case 'orange':
+        return Colors.orange;
+      case 'cyan':
+        return Colors.cyan;
+      default:
+        return Colors.grey;
+    }
   }
 
   void _showKnowledgeSourceSelector() {

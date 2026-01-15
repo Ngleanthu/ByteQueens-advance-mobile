@@ -4,7 +4,7 @@ import '../../../../data/models/prompt.dart';
 
 class EditPromptDialog extends StatefulWidget {
   final Prompt prompt;
-  const EditPromptDialog({Key? key, required this.prompt}) : super(key: key);
+  const EditPromptDialog({super.key, required this.prompt});
 
   @override
   State<EditPromptDialog> createState() => _EditPromptDialogState();

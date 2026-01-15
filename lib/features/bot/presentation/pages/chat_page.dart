@@ -53,7 +53,7 @@ class ChatPage extends StatefulWidget {
   final bool shouldOpenCamera; // Auto-trigger camera
 
   const ChatPage({
-    Key? key,
+    super.key,
     this.initialMessage = '',
     required this.modelId,
     required this.modelName,
@@ -61,19 +61,18 @@ class ChatPage extends StatefulWidget {
     this.chatId,
     this.shouldPickImage = false,
     this.shouldOpenCamera = false,
-  }) : super(key: key);
+  });
 
   // Named constructor for loading chat history
   const ChatPage.withHistory({
-    Key? key,
+    super.key,
     required this.chatId,
     required this.existingMessages,
     required this.modelName,
     required this.modelId,
   }) : initialMessage = '',
        shouldPickImage = false,
-       shouldOpenCamera = false,
-       super(key: key);
+       shouldOpenCamera = false;
 
   @override
   State<ChatPage> createState() => _ChatPageState();
