@@ -664,6 +664,34 @@ class _HomePageState extends State<HomePage> {
                                   // Clear message input for new chat
                                   _messageController.clear();
                                 },
+                                onImageUpload: () {
+                                  // Navigate to chat page to handle image upload
+                                  Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (context) => ChatPage(
+                                        modelId: _selectedModelId,
+                                        modelName: _selectedModel,
+                                        shouldPickImage:
+                                            true, // Trigger image picker
+                                      ),
+                                    ),
+                                  );
+                                },
+                                onCameraCapture: () {
+                                  // Navigate to chat page to handle camera capture
+                                  Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (context) => ChatPage(
+                                        modelId: _selectedModelId,
+                                        modelName: _selectedModel,
+                                        shouldOpenCamera:
+                                            true, // Trigger camera
+                                      ),
+                                    ),
+                                  );
+                                },
                               ),
                             ),
                           ],

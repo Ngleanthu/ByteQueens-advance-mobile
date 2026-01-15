@@ -10,6 +10,7 @@ import 'package:bytequeens_adm/features/bot/presentation/pages/bots_list_page.da
 import 'package:bytequeens_adm/features/bot/presentation/pages/create_bot_page.dart';
 import 'package:bytequeens_adm/features/bot/presentation/pages/bot_detail_page.dart';
 import 'package:bytequeens_adm/features/bot/presentation/pages/bot_preview_page.dart';
+import 'package:bytequeens_adm/features/bot/presentation/pages/chat_page.dart';
 import 'package:bytequeens_adm/features/group/presentation/pages/groups_list_page.dart';
 import 'package:bytequeens_adm/features/group/presentation/pages/create_group_page.dart';
 import 'package:bytequeens_adm/features/prompt/presentation/pages/prompt_list_page.dart';
@@ -91,6 +92,25 @@ class AppRoutes {
         }
         return MaterialPageRoute(
           builder: (context) => BotPreviewPage(botId: botId),
+          settings: settings,
+        );
+      case AppConstants.chatRoute:
+        final args = settings.arguments as Map<String, dynamic>?;
+        if (args == null ||
+            args['modelId'] == null ||
+            args['modelName'] == null) {
+          return MaterialPageRoute(
+            builder: (context) => const Scaffold(
+              body: Center(child: Text('Model information required')),
+            ),
+          );
+        }
+        return MaterialPageRoute(
+          builder: (context) => ChatPage(
+            initialMessage: '',
+            modelId: args['modelId'] as String,
+            modelName: args['modelName'] as String,
+          ),
           settings: settings,
         );
       case AppConstants.createEmailRoute:

@@ -385,63 +385,105 @@ class _ChatHistoryPageState extends State<ChatHistoryPage> {
             actualAssistantId = chat.messages[0]['_assistantId'] as String;
           }
 
-          // Use the actual assistant ID from conversation
-          final history = await _aiChatRepo.getConversationHistory(
-            conversationId: chat.id,
-            assistantId: actualAssistantId,
-            assistantModel: AppConstants.defaultAssistantModel,
-            limit: 100, // Increase limit to get more history
-          );
+          // Check if this is a custom bot by trying to parse as base model
+          bool isCustomBot = false;
+          try {
+            AssistantId.fromString(actualAssistantId);
+          } catch (e) {
+            // Not a base model, it's a custom bot
+            isCustomBot = true;
+          }
 
-          // Convert ApiChatMessage to UI format
-          // Each ApiChatMessage contains both query and answer for one exchange
+          // If it's a custom bot, we can't use getConversationHistory API
+          // because it only accepts base model assistant IDs
+          // Use messages from cache instead
           final messages = <Map<String, dynamic>>[];
 
-          // Sort by timestamp ascending (oldest first) for proper display order
-          final sortedItems = history.items.toList()
-            ..sort((a, b) => a.createdAt.compareTo(b.createdAt));
-
-          for (var msg in sortedItems) {
-            final timestamp = DateTime.fromMillisecondsSinceEpoch(
-              msg.createdAt * 1000,
+          if (isCustomBot) {
+            print('📌 Custom bot conversation detected, using cached messages');
+            // Bot conversations don't support history API yet
+            // Use the messages already in the chat object (from list API)
+            if (chat.messages.isNotEmpty) {
+              // The messages are already in the correct format
+              messages.addAll(
+                chat.messages.map((m) => Map<String, dynamic>.from(m)),
+              );
+            }
+          } else {
+            print('📌 Base model conversation, fetching from API');
+            // Use the actual assistant ID from conversation
+            final history = await _aiChatRepo.getConversationHistory(
+              conversationId: chat.id,
+              assistantId: actualAssistantId,
+              assistantModel: AppConstants.defaultAssistantModel,
+              limit: 100, // Increase limit to get more history
             );
 
-            // Add user message (query) if exists
-            if (msg.query.isNotEmpty) {
-              messages.add({
-                'content': msg.query,
-                'isUser': true,
-                'timestamp': timestamp,
-              });
-            }
+            // Convert ApiChatMessage to UI format
+            // Each ApiChatMessage contains both query and answer for one exchange
 
-            // Add AI response (answer) if exists - right after the query
-            if (msg.answer.isNotEmpty) {
-              // Get model name from message's assistant info
-              String? modelName;
-              String? modelId;
+            // Sort by timestamp ascending (oldest first) for proper display order
+            final sortedItems = history.items.toList()
+              ..sort((a, b) => a.createdAt.compareTo(b.createdAt));
 
-              if (msg.assistant != null) {
-                // Use assistant info from this specific message
-                final assistantId = AssistantId.fromString(msg.assistant!.id);
-                modelName = assistantId.displayName;
-                modelId = msg.assistant!.id;
-              } else {
-                // Fallback to conversation's assistant
-                final assistantId = AssistantId.fromString(actualAssistantId);
-                modelName = assistantId.displayName;
-                modelId = actualAssistantId;
+            for (var msg in sortedItems) {
+              final timestamp = DateTime.fromMillisecondsSinceEpoch(
+                msg.createdAt * 1000,
+              );
+
+              // Add user message (query) if exists
+              if (msg.query.isNotEmpty) {
+                messages.add({
+                  'content': msg.query,
+                  'isUser': true,
+                  'timestamp': timestamp,
+                });
               }
 
-              messages.add({
-                'content': msg.answer,
-                'isUser': false,
-                'timestamp': timestamp,
-                'modelName': modelName,
-                'modelId': modelId,
-                'messageId': 'm${msg.createdAt}',
-                'files': msg.files,
-              });
+              // Add AI response (answer) if exists - right after the query
+              if (msg.answer.isNotEmpty) {
+                String? modelName;
+                String? modelId;
+
+                if (msg.assistant != null) {
+                  modelId = msg.assistant!.id;
+
+                  // Try to parse as base model, if fails then it's a custom bot
+                  try {
+                    final assistantId = AssistantId.fromString(
+                      msg.assistant!.id,
+                    );
+                    modelName = assistantId.displayName;
+                  } catch (e) {
+                    // Custom bot - use the name from assistant or just the ID
+                    modelName = msg.assistant!.name;
+                    print(
+                      '📌 Found custom bot in history: $modelName (ID: $modelId)',
+                    );
+                  }
+                } else {
+                  // Fallback to conversation's assistant
+                  modelId = actualAssistantId;
+                  try {
+                    final assistantId = AssistantId.fromString(
+                      actualAssistantId,
+                    );
+                    modelName = assistantId.displayName;
+                  } catch (e) {
+                    modelName = actualAssistantId;
+                  }
+                }
+
+                messages.add({
+                  'content': msg.answer,
+                  'isUser': false,
+                  'timestamp': timestamp,
+                  'modelName': modelName,
+                  'modelId': modelId,
+                  'messageId': 'm${msg.createdAt}',
+                  'files': msg.files,
+                });
+              }
             }
           }
 
@@ -449,18 +491,29 @@ class _ChatHistoryPageState extends State<ChatHistoryPage> {
             _isLoading = false;
           });
 
-          // Get default model name for page title (use first message's model or fallback)
+          // Get model info from last message (most recent)
           String pageModelName = 'AI Chat';
+          String pageModelId = 'gpt-4o-mini';
           if (messages.isNotEmpty) {
-            // Find first AI response to get model name
-            final firstAiMsg = messages.firstWhere(
+            // Find last AI response to get model info
+            final lastAiMsg = messages.lastWhere(
               (m) => m['isUser'] == false,
               orElse: () => <String, dynamic>{},
             );
-            if (firstAiMsg.isNotEmpty && firstAiMsg['modelName'] != null) {
-              pageModelName = firstAiMsg['modelName'] as String;
+            if (lastAiMsg.isNotEmpty) {
+              if (lastAiMsg['modelName'] != null) {
+                pageModelName = lastAiMsg['modelName'] as String;
+              }
+              if (lastAiMsg['modelId'] != null) {
+                pageModelId = lastAiMsg['modelId'] as String;
+              }
             }
           }
+
+          print('📋 Navigating to ChatPage with:');
+          print('   Model Name: $pageModelName');
+          print('   Model ID: $pageModelId');
+          print('   Messages count: ${messages.length}');
 
           // Navigate to chat page with history
           if (mounted) {
@@ -471,6 +524,7 @@ class _ChatHistoryPageState extends State<ChatHistoryPage> {
                   chatId: chat.id,
                   existingMessages: messages,
                   modelName: pageModelName,
+                  modelId: pageModelId,
                 ),
               ),
             );

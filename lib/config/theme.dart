@@ -16,6 +16,11 @@ class AppTheme {
   static const Color lightIconColor = Color(0xFF6B7280);
   static const Color lightTextColor = Color(0xFF1F2937);
 
+  // Dark mode colors
+  static const Color darkBackground = Color(0xFF0D1B2A);
+  static const Color darkSurface = Color(0xFF1B263B);
+  static const Color darkCard = Color(0xFF2E4057);
+
   // Gradient cho background
   static const LinearGradient backgroundGradient = LinearGradient(
     begin: Alignment.topLeft,
