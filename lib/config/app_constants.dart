@@ -349,6 +349,64 @@ class AppConstants {
   static const String logoutConfirm = 'Are you sure you want to logout?';
   //Email
   static const String createEmail = "Create Email";
+
+  // Waitlist Banner
+  static const String waitlistBannerTitle = "✨ New Version Coming Soon! ✨";
+  static const String waitlistBannerDescription =
+      "Sign up now to be the first to experience the upgraded version with breakthrough features. Completely free for waitlist members!";
+  static const String joinWaitlist = "Join Waitlist Now";
+  static const String waitlistSuccess =
+      "🎉 Awesome! You've been added to the waitlist. We'll notify you as soon as the new version launches!";
+  static const String waitlistError =
+      "An error occurred. Please try again later.";
+
+  // Calendar Booking Banner
+  static const String calendarBannerTitle = "📅 Schedule Your Event";
+  static const String calendarBannerDescription =
+      "Book your calendar event with just one click! Select date, time, and we'll add it to your Google Calendar instantly.";
+  static const String bookCalendar = "Book Calendar Event";
+
+  // Calendar Booking Dialog
+  static const String bookingDialogTitle = "Create Calendar Event";
+  static const String eventTitle = "Event Title";
+  static const String eventTitleHint = "Enter event title...";
+  static const String eventDescription = "Description";
+  static const String eventDescriptionHint = "Enter event description...";
+  static const String selectDate = "Select Date";
+  static const String selectTime = "Select Time";
+  static const String duration = "Duration";
+  static const String minutes = "minutes";
+  static const String createEvent = "Create Event";
+  static const String calendarSuccess =
+      "🎉 Event added to your Google Calendar successfully!";
+  static const String calendarError =
+      "An error occurred. Please try again later.";
+  static const String pleaseFillAllFields = "Please fill all required fields";
+
+  // Google Drive Upload Banner
+  static const String driveUploadBannerTitle = "☁️ Upload to Google Drive";
+  static const String driveUploadBannerDescription =
+      "Upload your files, PDFs, or documents to Google Drive with just one click. Easy, fast, and secure!";
+  static const String uploadToDrive = "Upload to Drive";
+
+  // Drive Upload Dialog
+  static const String uploadDialogTitle = "Upload to Google Drive";
+  static const String selectFile = "Select File";
+  static const String noFileSelected = "No file selected";
+  static const String folderName = "Folder Name (Optional)";
+  static const String folderNameHint =
+      "Enter folder name or leave empty for root...";
+  static const String uploadFile = "Upload File";
+  static const String uploading = "Uploading...";
+  static const String driveUploadSuccess =
+      "🎉 File uploaded to Google Drive successfully!";
+  static const String driveUploadError =
+      "An error occurred. Please try again later.";
+  static const String pleaseSelectFile = "Please select a file to upload";
+  static const String fileTooLarge = "File is too large. Maximum size is 50MB";
+  static const String driveUploadSupportedFormats =
+      "Supported: PDF, Images, Documents";
+
   // Mock Data (for demo)
   static const String mockEmail = 'test@jarvis.com';
   static const String mockPassword = '12345678';

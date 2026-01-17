@@ -1,14 +1,20 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:bytequeens_adm/config/theme.dart';
 import 'package:bytequeens_adm/config/app_constants.dart';
 import 'package:bytequeens_adm/services/auth_service.dart';
 import 'package:bytequeens_adm/services/bot_service.dart';
 import 'package:bytequeens_adm/services/prompt_service.dart';
+import 'package:bytequeens_adm/services/waitlist_service.dart';
+import 'package:bytequeens_adm/services/calendar_booking_service.dart';
+import 'package:bytequeens_adm/services/google_drive_upload_service.dart';
 import 'package:bytequeens_adm/data/models/bot.dart';
 import 'package:bytequeens_adm/data/models/prompt.dart';
 import 'package:bytequeens_adm/app.dart';
 import 'package:bytequeens_adm/features/bot/presentation/widgets/chat_input_section.dart';
 import 'package:bytequeens_adm/features/bot/presentation/widgets/prompt_suggestion_overlay.dart';
+import 'package:bytequeens_adm/features/bot/presentation/widgets/calendar_booking_dialog.dart';
+import 'package:bytequeens_adm/features/bot/presentation/widgets/drive_upload_dialog.dart';
 import 'package:bytequeens_adm/features/bot/presentation/widgets/left_menu_drawer.dart';
 import 'package:bytequeens_adm/features/bot/presentation/pages/chat_page.dart';
 import 'package:bytequeens_adm/features/bot/presentation/pages/chat_history_page.dart';
@@ -24,6 +30,9 @@ class _HomePageState extends State<HomePage> {
   final _messageController = TextEditingController();
   final _botService = BotService();
   final _promptService = PromptService();
+  final _waitlistService = WaitlistService();
+  final _calendarService = CalendarBookingService();
+  final _driveUploadService = GoogleDriveUploadService();
   String _selectedModel = 'GPT-4o Mini';
   String _selectedModelId = 'gpt-4o-mini';
   List<Bot> _userBots = [];
@@ -73,6 +82,229 @@ class _HomePageState extends State<HomePage> {
       _selectedModelId = modelId;
       _selectedModel = modelName;
     });
+  }
+
+  Future<void> _handleJoinWaitlist() async {
+    final userEmail = AuthService().getCurrentUserEmail();
+    if (userEmail == null) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Please login to join the waitlist'),
+            backgroundColor: Colors.orange,
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+      return;
+    }
+
+    // Show loading indicator
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => const Center(
+        child: CircularProgressIndicator(
+          valueColor: AlwaysStoppedAnimation<Color>(AppTheme.primaryBlue),
+        ),
+      ),
+    );
+
+    try {
+      final response = await _waitlistService.addToWaitlist(email: userEmail);
+
+      if (mounted) {
+        Navigator.pop(context); // Close loading dialog
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(response.message),
+            backgroundColor: response.success ? Colors.green : Colors.red,
+            behavior: SnackBarBehavior.floating,
+            duration: const Duration(seconds: 4),
+            action: response.success
+                ? SnackBarAction(
+                    label: 'OK',
+                    textColor: Colors.white,
+                    onPressed: () {},
+                  )
+                : null,
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        Navigator.pop(context); // Close loading dialog
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('An error occurred. Please try again later.'),
+            backgroundColor: Colors.red,
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+    }
+  }
+
+  void _handleBookCalendar() {
+    showDialog(
+      context: context,
+      builder: (context) => CalendarBookingDialog(
+        onConfirm: (title, description, dateTime, duration) async {
+          _createCalendarEvent(title, description, dateTime, duration);
+        },
+      ),
+    );
+  }
+
+  Future<void> _createCalendarEvent(
+    String title,
+    String description,
+    DateTime dateTime,
+    int duration,
+  ) async {
+    final userEmail = AuthService().getCurrentUserEmail();
+    if (userEmail == null) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Please login to create calendar event'),
+            backgroundColor: Colors.orange,
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+      return;
+    }
+
+    // Show loading indicator
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => const Center(
+        child: CircularProgressIndicator(
+          valueColor: AlwaysStoppedAnimation<Color>(AppTheme.primaryBlue),
+        ),
+      ),
+    );
+
+    try {
+      final response = await _calendarService.createEvent(
+        email: userEmail,
+        title: title,
+        description: description,
+        startDateTime: dateTime,
+        durationMinutes: duration,
+      );
+
+      if (mounted) {
+        Navigator.pop(context); // Close loading dialog
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(response.message),
+            backgroundColor: response.success ? Colors.green : Colors.red,
+            behavior: SnackBarBehavior.floating,
+            duration: const Duration(seconds: 4),
+            action: response.success
+                ? SnackBarAction(
+                    label: 'OK',
+                    textColor: Colors.white,
+                    onPressed: () {},
+                  )
+                : null,
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        Navigator.pop(context); // Close loading dialog
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('An error occurred. Please try again later.'),
+            backgroundColor: Colors.red,
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+    }
+  }
+
+  void _handleUploadToDrive() {
+    showDialog(
+      context: context,
+      builder: (context) => DriveUploadDialog(
+        onConfirm: (file, folderName) async {
+          _uploadFileToDrive(file, folderName);
+        },
+      ),
+    );
+  }
+
+  Future<void> _uploadFileToDrive(File file, String? folderName) async {
+    final userEmail = AuthService().getCurrentUserEmail();
+    if (userEmail == null) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Please login to upload files'),
+            backgroundColor: Colors.orange,
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+      return;
+    }
+
+    // Show loading indicator
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => const Center(
+        child: CircularProgressIndicator(
+          valueColor: AlwaysStoppedAnimation<Color>(Colors.green),
+        ),
+      ),
+    );
+
+    try {
+      final response = await _driveUploadService.uploadFile(
+        email: userEmail,
+        file: file,
+        folderName: folderName,
+      );
+
+      if (mounted) {
+        Navigator.pop(context); // Close loading dialog
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(response.message),
+            backgroundColor: response.success ? Colors.green : Colors.red,
+            behavior: SnackBarBehavior.floating,
+            duration: const Duration(seconds: 4),
+            action: response.success
+                ? SnackBarAction(
+                    label: 'OK',
+                    textColor: Colors.white,
+                    onPressed: () {},
+                  )
+                : null,
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        Navigator.pop(context); // Close loading dialog
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('An error occurred. Please try again later.'),
+            backgroundColor: Colors.red,
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+    }
   }
 
   @override
@@ -466,6 +698,278 @@ class _HomePageState extends State<HomePage> {
                                                 ),
                                               ),
                                             ],
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+
+                                    const SizedBox(height: 24),
+
+                                    // Waitlist Banner
+                                    Container(
+                                      padding: const EdgeInsets.all(20),
+                                      decoration: BoxDecoration(
+                                        gradient: const LinearGradient(
+                                          colors: [
+                                            Color(0xFFFFF3E0),
+                                            Color(0xFFFFE0B2),
+                                          ],
+                                          begin: Alignment.topLeft,
+                                          end: Alignment.bottomRight,
+                                        ),
+                                        borderRadius: BorderRadius.circular(16),
+                                        boxShadow: [
+                                          BoxShadow(
+                                            color: Colors.orange.withOpacity(
+                                              0.2,
+                                            ),
+                                            blurRadius: 12,
+                                            offset: const Offset(0, 4),
+                                          ),
+                                        ],
+                                      ),
+                                      child: Column(
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
+                                        children: [
+                                          const Text(
+                                            AppConstants.waitlistBannerTitle,
+                                            style: TextStyle(
+                                              fontSize: 18,
+                                              fontWeight: FontWeight.bold,
+                                              color: Color(0xFFE65100),
+                                            ),
+                                          ),
+                                          const SizedBox(height: 12),
+                                          const Text(
+                                            AppConstants
+                                                .waitlistBannerDescription,
+                                            style: TextStyle(
+                                              fontSize: 14,
+                                              color: Color(0xFF6D4C41),
+                                              height: 1.5,
+                                            ),
+                                          ),
+                                          const SizedBox(height: 16),
+                                          SizedBox(
+                                            width: double.infinity,
+                                            child: ElevatedButton(
+                                              onPressed: _handleJoinWaitlist,
+                                              style: ElevatedButton.styleFrom(
+                                                backgroundColor: const Color(
+                                                  0xFFFF6F00,
+                                                ),
+                                                foregroundColor: Colors.white,
+                                                padding:
+                                                    const EdgeInsets.symmetric(
+                                                      vertical: 14,
+                                                    ),
+                                                shape: RoundedRectangleBorder(
+                                                  borderRadius:
+                                                      BorderRadius.circular(12),
+                                                ),
+                                                elevation: 4,
+                                              ),
+                                              child: Row(
+                                                mainAxisAlignment:
+                                                    MainAxisAlignment.center,
+                                                children: const [
+                                                  Icon(
+                                                    Icons.email_outlined,
+                                                    size: 20,
+                                                  ),
+                                                  SizedBox(width: 8),
+                                                  Text(
+                                                    AppConstants.joinWaitlist,
+                                                    style: TextStyle(
+                                                      fontSize: 15,
+                                                      fontWeight:
+                                                          FontWeight.w600,
+                                                    ),
+                                                  ),
+                                                ],
+                                              ),
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+
+                                    const SizedBox(height: 24),
+
+                                    // Calendar Booking Banner
+                                    Container(
+                                      padding: const EdgeInsets.all(20),
+                                      decoration: BoxDecoration(
+                                        gradient: const LinearGradient(
+                                          colors: [
+                                            Color(0xFFE3F2FD),
+                                            Color(0xFFBBDEFB),
+                                          ],
+                                          begin: Alignment.topLeft,
+                                          end: Alignment.bottomRight,
+                                        ),
+                                        borderRadius: BorderRadius.circular(16),
+                                        boxShadow: [
+                                          BoxShadow(
+                                            color: AppTheme.primaryBlue
+                                                .withOpacity(0.2),
+                                            blurRadius: 12,
+                                            offset: const Offset(0, 4),
+                                          ),
+                                        ],
+                                      ),
+                                      child: Column(
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
+                                        children: [
+                                          const Text(
+                                            AppConstants.calendarBannerTitle,
+                                            style: TextStyle(
+                                              fontSize: 18,
+                                              fontWeight: FontWeight.bold,
+                                              color: Color(0xFF0D47A1),
+                                            ),
+                                          ),
+                                          const SizedBox(height: 12),
+                                          const Text(
+                                            AppConstants
+                                                .calendarBannerDescription,
+                                            style: TextStyle(
+                                              fontSize: 14,
+                                              color: Color(0xFF1565C0),
+                                              height: 1.5,
+                                            ),
+                                          ),
+                                          const SizedBox(height: 16),
+                                          SizedBox(
+                                            width: double.infinity,
+                                            child: ElevatedButton(
+                                              onPressed: _handleBookCalendar,
+                                              style: ElevatedButton.styleFrom(
+                                                backgroundColor:
+                                                    AppTheme.primaryBlue,
+                                                foregroundColor: Colors.white,
+                                                padding:
+                                                    const EdgeInsets.symmetric(
+                                                      vertical: 14,
+                                                    ),
+                                                shape: RoundedRectangleBorder(
+                                                  borderRadius:
+                                                      BorderRadius.circular(12),
+                                                ),
+                                                elevation: 4,
+                                              ),
+                                              child: Row(
+                                                mainAxisAlignment:
+                                                    MainAxisAlignment.center,
+                                                children: const [
+                                                  Icon(
+                                                    Icons.calendar_today,
+                                                    size: 20,
+                                                  ),
+                                                  SizedBox(width: 8),
+                                                  Text(
+                                                    AppConstants.bookCalendar,
+                                                    style: TextStyle(
+                                                      fontSize: 15,
+                                                      fontWeight:
+                                                          FontWeight.w600,
+                                                    ),
+                                                  ),
+                                                ],
+                                              ),
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+
+                                    const SizedBox(height: 24),
+
+                                    // Google Drive Upload Banner
+                                    Container(
+                                      padding: const EdgeInsets.all(20),
+                                      decoration: BoxDecoration(
+                                        gradient: const LinearGradient(
+                                          colors: [
+                                            Color(0xFFE8F5E9),
+                                            Color(0xFFC8E6C9),
+                                          ],
+                                          begin: Alignment.topLeft,
+                                          end: Alignment.bottomRight,
+                                        ),
+                                        borderRadius: BorderRadius.circular(16),
+                                        boxShadow: [
+                                          BoxShadow(
+                                            color: Colors.green.withOpacity(
+                                              0.2,
+                                            ),
+                                            blurRadius: 12,
+                                            offset: const Offset(0, 4),
+                                          ),
+                                        ],
+                                      ),
+                                      child: Column(
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
+                                        children: [
+                                          const Text(
+                                            AppConstants.driveUploadBannerTitle,
+                                            style: TextStyle(
+                                              fontSize: 18,
+                                              fontWeight: FontWeight.bold,
+                                              color: Color(0xFF1B5E20),
+                                            ),
+                                          ),
+                                          const SizedBox(height: 12),
+                                          const Text(
+                                            AppConstants
+                                                .driveUploadBannerDescription,
+                                            style: TextStyle(
+                                              fontSize: 14,
+                                              color: Color(0xFF2E7D32),
+                                              height: 1.5,
+                                            ),
+                                          ),
+                                          const SizedBox(height: 16),
+                                          SizedBox(
+                                            width: double.infinity,
+                                            child: ElevatedButton(
+                                              onPressed: _handleUploadToDrive,
+                                              style: ElevatedButton.styleFrom(
+                                                backgroundColor: Colors.green,
+                                                foregroundColor: Colors.white,
+                                                padding:
+                                                    const EdgeInsets.symmetric(
+                                                      vertical: 14,
+                                                    ),
+                                                shape: RoundedRectangleBorder(
+                                                  borderRadius:
+                                                      BorderRadius.circular(12),
+                                                ),
+                                                elevation: 4,
+                                              ),
+                                              child: Row(
+                                                mainAxisAlignment:
+                                                    MainAxisAlignment.center,
+                                                children: const [
+                                                  Icon(
+                                                    Icons.cloud_upload,
+                                                    size: 20,
+                                                  ),
+                                                  SizedBox(width: 8),
+                                                  Text(
+                                                    AppConstants.uploadToDrive,
+                                                    style: TextStyle(
+                                                      fontSize: 15,
+                                                      fontWeight:
+                                                          FontWeight.w600,
+                                                    ),
+                                                  ),
+                                                ],
+                                              ),
+                                            ),
                                           ),
                                         ],
                                       ),
