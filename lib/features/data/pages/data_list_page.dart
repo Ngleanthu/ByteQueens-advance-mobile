@@ -7,9 +7,7 @@ import '../widgets/create_knowledge_dialog.dart';
 import '../widgets/edit_knowledge_dialog.dart';
 
 class KnowledgeListPage extends StatefulWidget {
-  final bool selectionMode;
-
-  const KnowledgeListPage({super.key, this.selectionMode = false});
+  const KnowledgeListPage({super.key});
 
   @override
   State<KnowledgeListPage> createState() => _KnowledgeListPageState();
@@ -23,7 +21,6 @@ class _KnowledgeListPageState extends State<KnowledgeListPage> {
   String _searchQuery = '';
   bool _isLoading = false;
   String? _errorMessage;
-  final Set<String> _selectedKnowledgeIds = {}; // For selection mode
 
   static const primaryBlue = Color(0xFF2196F3);
   static const lightBlue = Color(0xFF4A90E2);
@@ -36,9 +33,6 @@ class _KnowledgeListPageState extends State<KnowledgeListPage> {
   @override
   void initState() {
     super.initState();
-    print(
-      '🔍 KnowledgeListPage initialized with selectionMode: ${widget.selectionMode}',
-    );
     _loadKnowledgeBases();
   }
 
@@ -271,11 +265,9 @@ class _KnowledgeListPageState extends State<KnowledgeListPage> {
         elevation: 0,
         backgroundColor: cardWhite,
         centerTitle: false,
-        title: Text(
-          widget.selectionMode
-              ? 'Select Knowledges (${_selectedKnowledgeIds.length})'
-              : 'Knowledge Base',
-          style: const TextStyle(
+        title: const Text(
+          'Knowledge Base',
+          style: TextStyle(
             color: textDark,
             fontWeight: FontWeight.w700,
             fontSize: 24,
@@ -285,13 +277,6 @@ class _KnowledgeListPageState extends State<KnowledgeListPage> {
         iconTheme: const IconThemeData(color: primaryBlue),
         shadowColor: Colors.black.withOpacity(0.05),
         actions: [
-          if (widget.selectionMode && _selectedKnowledgeIds.isNotEmpty)
-            TextButton(
-              onPressed: () {
-                setState(() => _selectedKnowledgeIds.clear());
-              },
-              child: const Text('Clear'),
-            ),
           IconButton(
             icon: const Icon(CupertinoIcons.refresh, color: primaryBlue),
             onPressed: _isLoading ? null : _loadKnowledgeBases,
@@ -300,39 +285,6 @@ class _KnowledgeListPageState extends State<KnowledgeListPage> {
       ),
       body: Column(
         children: [
-          // Selection mode indicator banner
-          if (widget.selectionMode)
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-              decoration: BoxDecoration(
-                color: primaryBlue.withOpacity(0.1),
-                border: Border(
-                  bottom: BorderSide(color: primaryBlue.withOpacity(0.3)),
-                ),
-              ),
-              child: Row(
-                children: [
-                  Icon(
-                    Icons.check_circle_outline,
-                    color: primaryBlue,
-                    size: 20,
-                  ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: Text(
-                      'Select knowledges to import to your bot',
-                      style: TextStyle(
-                        color: primaryBlue,
-                        fontSize: 13,
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-
           // Create Button
           Padding(
             padding: const EdgeInsets.all(16),
@@ -454,35 +406,20 @@ class _KnowledgeListPageState extends State<KnowledgeListPage> {
                       itemCount: filteredKnowledgeBases.length,
                       itemBuilder: (context, index) {
                         final kb = filteredKnowledgeBases[index];
-                        final isSelected = _selectedKnowledgeIds.contains(
-                          kb.id,
+                        return KnowledgeItem(
+                          knowledge: kb,
+                          onTap: () {
+                            _showSnackBar('Opening: ${kb.name}');
+                          },
+                          onEdit: () => _handleEdit(kb),
+                          onDelete: () => _handleDelete(kb),
                         );
-
-                        return widget.selectionMode
-                            ? _buildSelectableKnowledgeItem(kb, isSelected)
-                            : KnowledgeItem(
-                                knowledge: kb,
-                                onTap: () {
-                                  _showSnackBar('Opening: ${kb.name}');
-                                },
-                                onEdit: () => _handleEdit(kb),
-                                onDelete: () => _handleDelete(kb),
-                              );
                       },
                     ),
                   ),
           ),
         ],
       ),
-      floatingActionButton:
-          widget.selectionMode && _selectedKnowledgeIds.isNotEmpty
-          ? FloatingActionButton.extended(
-              onPressed: _handleImportSelected,
-              backgroundColor: primaryBlue,
-              icon: const Icon(Icons.check),
-              label: Text('Import (${_selectedKnowledgeIds.length})'),
-            )
-          : null,
     );
   }
 
@@ -578,134 +515,5 @@ class _KnowledgeListPageState extends State<KnowledgeListPage> {
         ],
       ),
     );
-  }
-
-  /// Build selectable knowledge item with checkbox
-  Widget _buildSelectableKnowledgeItem(KnowledgeBase kb, bool isSelected) {
-    return Card(
-      margin: const EdgeInsets.only(bottom: 12),
-      elevation: 0,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(16),
-        side: BorderSide(
-          color: isSelected ? primaryBlue : borderColor,
-          width: isSelected ? 2 : 1,
-        ),
-      ),
-      child: InkWell(
-        onTap: () {
-          setState(() {
-            if (isSelected) {
-              _selectedKnowledgeIds.remove(kb.id);
-            } else {
-              _selectedKnowledgeIds.add(kb.id);
-            }
-          });
-        },
-        borderRadius: BorderRadius.circular(16),
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Row(
-            children: [
-              // Checkbox
-              Container(
-                width: 24,
-                height: 24,
-                decoration: BoxDecoration(
-                  color: isSelected ? primaryBlue : Colors.transparent,
-                  border: Border.all(
-                    color: isSelected ? primaryBlue : textGray.withOpacity(0.3),
-                    width: 2,
-                  ),
-                  borderRadius: BorderRadius.circular(6),
-                ),
-                child: isSelected
-                    ? const Icon(Icons.check, size: 16, color: Colors.white)
-                    : null,
-              ),
-              const SizedBox(width: 16),
-
-              // Knowledge icon
-              Container(
-                width: 48,
-                height: 48,
-                decoration: BoxDecoration(
-                  color: primaryBlue.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: const Icon(
-                  CupertinoIcons.book,
-                  color: primaryBlue,
-                  size: 24,
-                ),
-              ),
-              const SizedBox(width: 16),
-
-              // Knowledge info
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      kb.name,
-                      style: const TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w600,
-                        color: textDark,
-                      ),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      kb.description.isNotEmpty
-                          ? kb.description
-                          : 'No description',
-                      style: TextStyle(
-                        fontSize: 13,
-                        color: textGray.withOpacity(0.8),
-                      ),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                    const SizedBox(height: 4),
-                    Row(
-                      children: [
-                        Icon(
-                          CupertinoIcons.doc_text,
-                          size: 12,
-                          color: textGray.withOpacity(0.6),
-                        ),
-                        const SizedBox(width: 4),
-                        Text(
-                          '${kb.unitCount} units',
-                          style: TextStyle(
-                            fontSize: 12,
-                            color: textGray.withOpacity(0.6),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  /// Handle import selected knowledges
-  void _handleImportSelected() {
-    if (_selectedKnowledgeIds.isEmpty) return;
-
-    // Return selected knowledge IDs back to bot detail page
-    final selectedKnowledges = _knowledgeBases
-        .where((kb) => _selectedKnowledgeIds.contains(kb.id))
-        .toList();
-
-    print('🎯 Returning ${selectedKnowledges.length} selected knowledge(s)');
-    Navigator.pop(context, selectedKnowledges);
   }
 }
