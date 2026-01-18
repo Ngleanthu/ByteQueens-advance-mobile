@@ -1,5 +1,6 @@
 /// Knowledge Base Chat Models
 /// Models for KB chat endpoints and Jarvis chat integration
+library;
 
 /// KB Ask Bot Request - For preview/testing chat
 class KBChatRequest {

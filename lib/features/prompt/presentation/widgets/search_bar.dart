@@ -66,7 +66,6 @@ class SearchBarWidget extends StatelessWidget {
           if (controller.text.isNotEmpty) ...[
             CupertinoButton(
               padding: EdgeInsets.zero,
-              minSize: 0,
               onPressed: onClear,
               child: Container(
                 width: 20,
@@ -80,7 +79,7 @@ class SearchBarWidget extends StatelessWidget {
                   color: textGray.withOpacity(0.6),
                   size: 12,
                 ),
-              ),
+              ), minimumSize: Size(0, 0),
             ),
             const SizedBox(width: 12),
           ] else

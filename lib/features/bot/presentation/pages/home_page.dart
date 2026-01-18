@@ -349,6 +349,20 @@ class _HomePageState extends State<HomePage> {
                 },
               ),
               ListTile(
+                leading: const Icon(
+                  Icons.dataset_linked_outlined,
+                  color: Colors.white,
+                ),
+                title: const Text(
+                  'Data',
+                  style: TextStyle(color: Colors.white),
+                ),
+                onTap: () {
+                  Navigator.pop(context);
+                  Navigator.pushNamed(context, AppConstants.KnowledgeRoute);
+                },
+              ),
+              ListTile(
                 leading: const Icon(Icons.smart_toy, color: Colors.white),
                 title: const Text(
                   AppConstants.myBots,
