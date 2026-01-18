@@ -141,8 +141,9 @@ class _DriveUploadDialogState extends State<DriveUploadDialog> {
     if (fileName.endsWith('.jpg') ||
         fileName.endsWith('.jpeg') ||
         fileName.endsWith('.png') ||
-        fileName.endsWith('.gif'))
+        fileName.endsWith('.gif')) {
       return '🖼️';
+    }
     return '📄';
   }
 

@@ -29,7 +29,7 @@ class _PublishBotPageState extends State<PublishBotPage> {
   final _messengerTokenController = TextEditingController();
 
   bool _isPublishing = false;
-  Map<String, bool> _publishedPlatforms =
+  final Map<String, bool> _publishedPlatforms =
       {}; // Track which platforms are published
 
   @override

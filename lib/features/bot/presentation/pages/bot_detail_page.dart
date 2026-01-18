@@ -84,7 +84,7 @@ class _BotDetailPageState extends State<BotDetailPage>
         _previewMessages.add(
           PreviewMessage(
             text:
-                'Hi! I\'m ${bot.name}. ${bot.description ?? "I\'m here to help you"}. How can I help you today?',
+                'Hi! I\'m ${bot.name}. ${bot.description ?? "I'm here to help you"}. How can I help you today?',
             isUser: false,
             timestamp: DateTime.now(),
           ),
@@ -1598,7 +1598,7 @@ class _BotDetailPageState extends State<BotDetailPage>
         _previewMessages.add(
           PreviewMessage(
             text:
-                'Hi! I\'m ${_bot!.name}. ${_bot!.description ?? "I\'m here to help you"}. How can I help you today?',
+                'Hi! I\'m ${_bot!.name}. ${_bot!.description ?? "I'm here to help you"}. How can I help you today?',
             isUser: false,
             timestamp: DateTime.now(),
           ),

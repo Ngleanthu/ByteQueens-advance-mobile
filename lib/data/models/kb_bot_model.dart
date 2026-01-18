@@ -1,5 +1,6 @@
 /// Knowledge Base Bot Models
 /// Models for KB API bot management endpoints
+library;
 
 /// KB Bot - Response model from KB API
 class KBBot {

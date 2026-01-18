@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/cupertino.dart';
-import '../../data/models/knowledge_base.dart';
 
 class CreateKnowledgeDialog extends StatefulWidget {
   const CreateKnowledgeDialog({super.key});
@@ -31,17 +30,11 @@ class _CreateKnowledgeDialogState extends State<CreateKnowledgeDialog> {
 
   void _handleSave() {
     if (_formKey.currentState?.validate() ?? false) {
-      final knowledge = KnowledgeBase(
-        id: DateTime.now().millisecondsSinceEpoch.toString(),
-        name: _nameController.text.trim(),
-        description: _descriptionController.text.trim(),
-        unitCount: 0,
-        sizeInBytes: 0,
-        createdAt: DateTime.now(),
-        updatedAt: DateTime.now(),
-      );
-
-      Navigator.pop(context, knowledge);
+      // FIX: Trả về Map thay vì KnowledgeBase object
+      Navigator.pop(context, {
+        'name': _nameController.text.trim(),
+        'description': _descriptionController.text.trim(),
+      });
     }
   }
 
@@ -112,7 +105,7 @@ class _CreateKnowledgeDialogState extends State<CreateKnowledgeDialog> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     // Name field
-                    Text(
+                    const Text(
                       'Knowledge Base Name',
                       style: TextStyle(
                         fontSize: 14,
