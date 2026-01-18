@@ -462,49 +462,20 @@ class _ChatPageState extends State<ChatPage> {
       // Upload image if present
       List<String> fileUrls = [];
       if (imagePath != null) {
-        // ⚠️ TEMPORARY: Image feature disabled due to backend issue
-        // Backend returns 500 error when processing image requests
-        // TODO: Re-enable when backend supports image processing
-
-        print('⚠️ Image feature temporarily disabled (backend error 500)');
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(
-                'Image support is temporarily unavailable. Sending text only.',
-              ),
-              backgroundColor: Colors.orange,
-              action: SnackBarAction(
-                label: 'OK',
-                textColor: Colors.white,
-                onPressed: () {},
-              ),
-              duration: Duration(seconds: 4),
-            ),
-          );
-        }
-
-        // Clear image and continue with text only
-        setState(() {
-          _pendingImagePath = null;
-          _pendingXFile = null;
-        });
-
-        /* ORIGINAL CODE - Re-enable when backend fixed:
         try {
           print('📤 Uploading image...');
           final fileUrl = await _fileUploadService.uploadImage(
             imagePath,
-            xFile: _pendingXFile,
+            xFile: _pendingXFile, // Pass XFile for web support
           );
           fileUrls.add(fileUrl);
           print('✅ Image uploaded: $fileUrl');
-          
+
           // Validate URL
           if (!fileUrl.startsWith('http')) {
             throw Exception('Invalid image URL format');
           }
-          
+
           // Check if model supports vision
           final supportsVision = _modelSupportsVision(_selectedModelId);
           if (!supportsVision) {
@@ -529,8 +500,8 @@ class _ChatPageState extends State<ChatPage> {
               ),
             );
           }
+          // Continue without image on error
         }
-        */
       }
 
       MessageResponse response;

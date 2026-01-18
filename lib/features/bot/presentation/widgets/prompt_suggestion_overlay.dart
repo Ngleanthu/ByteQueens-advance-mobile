@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:bytequeens_adm/data/models/prompt.dart';
 import 'package:bytequeens_adm/services/prompt_service.dart';
+import 'prompt_input_dialog.dart';
 
 /// Widget wrapper that adds prompt suggestion overlay to any TextField
 /// Usage: Wrap your input widget with PromptSuggestionOverlay
@@ -243,14 +244,35 @@ class _PromptSuggestionOverlayState extends State<PromptSuggestionOverlay> {
   }
 
   void _selectPrompt(Prompt prompt) {
-    widget.messageController.text = prompt.content;
+    // Clear the "/" text first
+    widget.messageController.clear();
+
+    // Remove overlay
     _removeOverlay();
     setState(() {
       _showPromptSuggestions = false;
     });
 
-    // Callback if provided
-    widget.onPromptSelected?.call(prompt.content);
+    // Check if prompt has placeholders
+    final hasPlaceholders = RegExp(r'\[([^\]]+)\]').hasMatch(prompt.content);
+
+    if (hasPlaceholders) {
+      // Show dialog to fill in placeholders
+      showDialog(
+        context: context,
+        builder: (context) => PromptInputDialog(
+          prompt: prompt,
+          onSend: (finalContent) {
+            widget.messageController.text = finalContent;
+            widget.onPromptSelected?.call(finalContent);
+          },
+        ),
+      );
+    } else {
+      // No placeholders, use directly
+      widget.messageController.text = prompt.content;
+      widget.onPromptSelected?.call(prompt.content);
+    }
   }
 
   @override

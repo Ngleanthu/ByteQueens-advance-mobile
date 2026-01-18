@@ -648,7 +648,7 @@ class _CreateBotPageState extends State<CreateBotPage> {
                         ],
                       ),
                     );
-                  }).toList(),
+                  }),
 
                 // Add knowledge source button
                 OutlinedButton.icon(
