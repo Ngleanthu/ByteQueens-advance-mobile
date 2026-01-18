@@ -68,6 +68,22 @@ class AiChatService {
           print('   Status: ${error.response?.statusCode}');
           print('   Message: ${error.message}');
           print('   Response: ${error.response?.data}');
+
+          // Debug: Log full response body for 500 errors
+          if (error.response?.statusCode == 500) {
+            print('🔴 500 ERROR DETAILS:');
+            print('   Request URL: ${error.requestOptions.uri}');
+            print('   Request Method: ${error.requestOptions.method}');
+            print('   Request Data: ${error.requestOptions.data}');
+            print('   Response Headers: ${error.response?.headers}');
+            print('   Response Body Type: ${error.response?.data.runtimeType}');
+            if (error.response?.data is Map) {
+              final data = error.response?.data as Map<String, dynamic>;
+              print('   Error Details: ${data['details']}');
+              print('   Error Message: ${data['message']}');
+              print('   Request ID: ${data['requestId']}');
+            }
+          }
           return handler.next(error);
         },
       ),

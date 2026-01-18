@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'package:dio/dio.dart';
 import 'package:bytequeens_adm/config/app_constants.dart';
 import 'package:bytequeens_adm/data/models/kb_bot_model.dart';
@@ -334,6 +335,7 @@ class KBService {
 
   /// Preview chat with bot (testing)
   /// POST /ai-assistant/{assistantId}/ask
+  /// Note: This API returns STREAMING response (SSE)
   Future<KBChatResponse> askBot({
     required String assistantId,
     required String message,
@@ -348,23 +350,69 @@ class KBService {
     return await _executeWithRetry<KBChatResponse>(() async {
       final request = KBChatRequest(message: message);
 
-      final response = await _dio.post(endpoint, data: request.toJson());
+      print('🚀 Calling askBot API...');
+      print('   Endpoint: ${AppConstants.kbBaseUrl}$endpoint');
+      print('   Request: ${request.toJson()}');
+
+      // API returns streaming response, need to collect all chunks
+      final response = await _dio.post(
+        endpoint,
+        data: request.toJson(),
+        options: Options(
+          responseType: ResponseType.stream,
+          headers: {'Accept': 'text/event-stream, application/json'},
+        ),
+      );
 
       if (response.statusCode == 200) {
-        // Response should contain content and conversationId
-        if (response.data is String) {
-          return KBChatResponse(
-            content: response.data as String,
-            conversationId: null,
+        print('✅ Got streaming response, collecting chunks...');
+
+        final stream = response.data as ResponseBody;
+        final chunks = <String>[];
+        String? conversationId;
+
+        // Collect all streaming chunks
+        await for (final chunk in utf8.decoder.bind(stream.stream)) {
+          print(
+            '📦 Chunk received: ${chunk.substring(0, chunk.length > 100 ? 100 : chunk.length)}...',
           );
-        } else if (response.data is Map<String, dynamic>) {
-          return KBChatResponse.fromJson(response.data as Map<String, dynamic>);
-        } else {
-          throw ApiException.validation(
-            message: 'Unexpected response format',
-            endpoint: endpoint,
-          );
+
+          // Parse SSE format: "data: {json}\n\n"
+          final lines = chunk.split('\n');
+          for (final line in lines) {
+            if (line.startsWith('data:')) {
+              try {
+                final jsonStr = line.substring(5).trim();
+                if (jsonStr.isNotEmpty && jsonStr != '[DONE]') {
+                  final data = jsonDecode(jsonStr) as Map<String, dynamic>;
+
+                  // Extract content
+                  if (data.containsKey('content')) {
+                    chunks.add(data['content'] as String);
+                  }
+
+                  // Extract conversationId
+                  if (data.containsKey('conversationId')) {
+                    conversationId = data['conversationId'] as String;
+                  }
+                }
+              } catch (e) {
+                print('⚠️ Failed to parse chunk: $e');
+                // Continue with next chunk
+              }
+            }
+          }
         }
+
+        final fullContent = chunks.join('');
+        print(
+          '✅ Streaming complete. Total content length: ${fullContent.length}',
+        );
+
+        return KBChatResponse(
+          content: fullContent,
+          conversationId: conversationId,
+        );
       } else {
         throw ApiException.fromStatusCode(
           statusCode: response.statusCode ?? 500,
