@@ -3,6 +3,7 @@ import 'package:dio/dio.dart';
 import 'package:bytequeens_adm/config/app_constants.dart';
 import 'package:bytequeens_adm/data/models/kb_bot_model.dart';
 import 'package:bytequeens_adm/data/models/kb_chat_model.dart';
+import 'package:bytequeens_adm/data/models/kb_knowledge_model.dart';
 import 'package:bytequeens_adm/data/models/api_exception.dart';
 import 'package:bytequeens_adm/services/auth_service.dart';
 
@@ -462,6 +463,62 @@ class KBService {
 
   // ========== KNOWLEDGE MANAGEMENT APIS ==========
 
+  /// Get all knowledges linked to a bot
+  /// GET /ai-assistant/{assistantId}/knowledges
+  /// Response: PageDto with data: KnowledgeResDto[] and meta: PageMetaDto
+  Future<List<KnowledgeResDto>> getBotKnowledges(
+    String assistantId, {
+    String? query,
+    String? order,
+    String? orderField,
+    int? offset,
+    int? limit,
+  }) async {
+    _initializeKBDio();
+
+    final endpoint = '/ai-assistant/$assistantId/knowledges';
+
+    // Build query parameters
+    final queryParams = <String, dynamic>{};
+    if (query != null && query.isNotEmpty) queryParams['q'] = query;
+    if (order != null) queryParams['order'] = order;
+    if (orderField != null) queryParams['order_field'] = orderField;
+    if (offset != null) queryParams['offset'] = offset;
+    if (limit != null) queryParams['limit'] = limit;
+
+    return await _executeWithRetry<List<KnowledgeResDto>>(() async {
+      final response = await _dio.get(endpoint, queryParameters: queryParams);
+
+      if (response.statusCode == 200) {
+        // Response format: { data: KnowledgeResDto[], meta: PageMetaDto }
+        if (response.data is Map && response.data.containsKey('data')) {
+          final data = response.data['data'] as List;
+          print(
+            '✅ Loaded ${data.length} knowledge(s) for assistant $assistantId',
+          );
+
+          return data
+              .map(
+                (item) =>
+                    KnowledgeResDto.fromJson(item as Map<String, dynamic>),
+              )
+              .toList();
+        } else {
+          throw ApiException.validation(
+            message: 'Invalid response format: expected {data: [], meta: {}}',
+            endpoint: endpoint,
+          );
+        }
+      } else {
+        throw ApiException.fromStatusCode(
+          statusCode: response.statusCode ?? 500,
+          message: _getErrorMessage(response, 'Failed to load bot knowledges'),
+          endpoint: endpoint,
+        );
+      }
+    }, endpoint: endpoint);
+  }
+
   /// Add knowledge to bot
   /// POST /ai-assistant/{assistantId}/knowledges/{knowledgeId}
   Future<bool> addKnowledgeToBot({
@@ -477,8 +534,9 @@ class KBService {
     return await _executeWithRetry<bool>(() async {
       final response = await _dio.post(endpoint);
 
-      if (response.statusCode == 200) {
-        // API returns TRUE for success
+      if (response.statusCode == 200 || response.statusCode == 204) {
+        // API returns 200 OK or 204 No Content for success
+        print('✅ Knowledge imported successfully (${response.statusCode})');
         return true;
       } else {
         throw ApiException.fromStatusCode(
@@ -505,8 +563,9 @@ class KBService {
     return await _executeWithRetry<bool>(() async {
       final response = await _dio.delete(endpoint);
 
-      if (response.statusCode == 200) {
-        // API returns TRUE for success
+      if (response.statusCode == 200 || response.statusCode == 204) {
+        // API returns 200 OK or 204 No Content for success
+        print('✅ Knowledge removed successfully (${response.statusCode})');
         return true;
       } else {
         throw ApiException.fromStatusCode(

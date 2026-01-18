@@ -14,6 +14,7 @@ import 'package:bytequeens_adm/features/bot/presentation/pages/chat_page.dart';
 import 'package:bytequeens_adm/features/group/presentation/pages/groups_list_page.dart';
 import 'package:bytequeens_adm/features/group/presentation/pages/create_group_page.dart';
 import 'package:bytequeens_adm/features/prompt/presentation/pages/prompt_list_page.dart';
+import 'package:bytequeens_adm/features/data/pages/data_list_page.dart';
 
 class AppRoutes {
   static const String initial = AppConstants.splashRoute;
@@ -30,6 +31,7 @@ class AppRoutes {
     AppConstants.createGroupRoute: (context) => const CreateGroupPage(),
     AppConstants.promptListRoute: (context) => const PromptListPage(),
     AppConstants.createEmailRoute: (context) => const CreateEmailPage(),
+    // KnowledgeRoute handled in onGenerateRoute to support arguments
   };
 
   static Route<dynamic>? onGenerateRoute(RouteSettings settings) {
@@ -68,6 +70,14 @@ class AppRoutes {
       case AppConstants.createBotRoute:
         return MaterialPageRoute(
           builder: (context) => const CreateBotPage(),
+          settings: settings,
+        );
+      case AppConstants.KnowledgeRoute:
+        // Support selection mode for importing knowledges to bot
+        final args = settings.arguments as Map<String, dynamic>?;
+        final selectionMode = args?['selectionMode'] as bool? ?? false;
+        return MaterialPageRoute(
+          builder: (context) => KnowledgeListPage(selectionMode: selectionMode),
           settings: settings,
         );
       case AppConstants.botDetailRoute:

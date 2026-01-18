@@ -1,5 +1,58 @@
 /// Knowledge Base Knowledge Models
 /// Models for knowledge sources and their management
+library;
+
+/// Knowledge Response DTO - From API GET /ai-assistant/{id}/knowledges
+/// Matches KnowledgeResDto from OpenAPI spec
+class KnowledgeResDto {
+  final String? id; // May not be in response, use knowledgeName as fallback
+  final DateTime createdAt;
+  final DateTime? updatedAt;
+  final String? createdBy;
+  final String? updatedBy;
+  final String userId;
+  final String knowledgeName;
+  final String description;
+
+  KnowledgeResDto({
+    this.id,
+    required this.createdAt,
+    this.updatedAt,
+    this.createdBy,
+    this.updatedBy,
+    required this.userId,
+    required this.knowledgeName,
+    required this.description,
+  });
+
+  factory KnowledgeResDto.fromJson(Map<String, dynamic> json) {
+    return KnowledgeResDto(
+      id: json['id'] as String?,
+      createdAt: DateTime.parse(json['createdAt'] as String),
+      updatedAt: json['updatedAt'] != null
+          ? DateTime.parse(json['updatedAt'] as String)
+          : null,
+      createdBy: json['createdBy'] as String?,
+      updatedBy: json['updatedBy'] as String?,
+      userId: json['userId'] as String,
+      knowledgeName: json['knowledgeName'] as String,
+      description: json['description'] as String,
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      if (id != null) 'id': id,
+      'createdAt': createdAt.toIso8601String(),
+      if (updatedAt != null) 'updatedAt': updatedAt!.toIso8601String(),
+      if (createdBy != null) 'createdBy': createdBy,
+      if (updatedBy != null) 'updatedBy': updatedBy,
+      'userId': userId,
+      'knowledgeName': knowledgeName,
+      'description': description,
+    };
+  }
+}
 
 /// KB Knowledge - Represents a knowledge source/unit
 class KBKnowledge {

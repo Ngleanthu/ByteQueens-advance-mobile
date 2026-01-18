@@ -4,8 +4,10 @@ import 'package:bytequeens_adm/config/app_constants.dart';
 import 'package:bytequeens_adm/services/bot_service.dart';
 import 'package:bytequeens_adm/services/kb_service.dart';
 import 'package:bytequeens_adm/services/kb_chat_service.dart';
+import 'package:bytequeens_adm/services/knowledge_service.dart';
 import 'package:bytequeens_adm/data/models/bot.dart';
 import 'package:bytequeens_adm/data/models/knowledge_source.dart';
+import 'package:bytequeens_adm/features/data/models/knowledge_base.dart';
 import 'package:bytequeens_adm/data/models/api_exception.dart';
 import 'package:bytequeens_adm/features/bot/presentation/widgets/add_knowledge_dialog.dart';
 import 'package:bytequeens_adm/features/bot/presentation/pages/publish_bot_page.dart';
@@ -24,6 +26,7 @@ class _BotDetailPageState extends State<BotDetailPage>
   final _botService = BotService();
   final _kbService = KBService();
   final _kbChatService = KBChatService();
+  final _knowledgeService = KnowledgeService();
   late TabController _tabController;
 
   Bot? _bot;
@@ -84,7 +87,7 @@ class _BotDetailPageState extends State<BotDetailPage>
         _previewMessages.add(
           PreviewMessage(
             text:
-                'Hi! I\'m ${bot.name}. ${bot.description ?? "I\'m here to help you"}. How can I help you today?',
+                'Hi! I\'m ${bot.name}. ${bot.description ?? "I'm here to help you"}. How can I help you today?',
             isUser: false,
             timestamp: DateTime.now(),
           ),
@@ -119,87 +122,188 @@ class _BotDetailPageState extends State<BotDetailPage>
     setState(() => _isLoadingKnowledges = true);
 
     try {
-      // Mock data for now - Replace with actual API call when available
-      // final knowledges = await _kbService.getBotKnowledges(_bot!.id);
+      // ✅ Call real API to get bot's knowledges
+      final knowledges = await _kbService.getBotKnowledges(
+        _bot!.id,
+        order: 'DESC',
+        orderField: 'createdAt',
+        limit: 50,
+      );
 
-      // For now, use mock data based on bot's knowledgeBaseName
       setState(() {
-        _botKnowledges = _generateMockKnowledges();
+        // Convert KnowledgeResDto to KnowledgeSource for display
+        _botKnowledges = knowledges.map((kb) {
+          return KnowledgeSource(
+            id: kb.id ?? kb.knowledgeName, // Use knowledgeName as fallback ID
+            name: kb.knowledgeName,
+            type: KnowledgeSourceType.localFiles, // Default type
+            autoUpdate: false,
+            createdAt: kb.createdAt,
+          );
+        }).toList();
         _isLoadingKnowledges = false;
       });
+
+      print('✅ Loaded ${knowledges.length} knowledge(s) for bot ${_bot!.id}');
     } catch (e) {
       setState(() => _isLoadingKnowledges = false);
-      print('Error loading bot knowledges: $e');
+      print('❌ Error loading bot knowledges: $e');
+      // Show empty list on error
+      setState(() => _botKnowledges = []);
     }
-  }
-
-  List<KnowledgeSource> _generateMockKnowledges() {
-    // Generate some mock knowledge sources for demo
-    return [
-      KnowledgeSource(
-        id: '1',
-        name: 'Product Documentation',
-        type: KnowledgeSourceType.website,
-        url: 'https://docs.example.com',
-        autoUpdate: true,
-        createdAt: DateTime.now().subtract(const Duration(days: 5)),
-      ),
-      KnowledgeSource(
-        id: '2',
-        name: 'FAQ Database',
-        type: KnowledgeSourceType.localFiles,
-        files: ['faq.pdf', 'support.docx'],
-        autoUpdate: false,
-        createdAt: DateTime.now().subtract(const Duration(days: 10)),
-      ),
-    ];
   }
 
   Future<void> _loadAvailableKnowledges() async {
     try {
-      // Mock available knowledge sources - Replace with actual API call
-      setState(() {
-        _availableKnowledges = [
-          KnowledgeSource(
-            id: '3',
-            name: 'Marketing Materials',
-            type: KnowledgeSourceType.googleDrive,
-            url: 'https://drive.google.com/...',
-            autoUpdate: true,
-            createdAt: DateTime.now().subtract(const Duration(days: 3)),
-          ),
-          KnowledgeSource(
-            id: '4',
-            name: 'Team Wiki',
-            type: KnowledgeSourceType.confluence,
-            url: 'https://wiki.example.com',
-            autoUpdate: true,
-            createdAt: DateTime.now().subtract(const Duration(days: 7)),
-          ),
-          KnowledgeSource(
-            id: '5',
-            name: 'Support Tickets',
-            type: KnowledgeSourceType.slack,
-            url: 'https://slack.com/...',
-            autoUpdate: false,
-            createdAt: DateTime.now().subtract(const Duration(days: 15)),
-          ),
-          KnowledgeSource(
-            id: '6',
-            name: 'Tutorial Videos',
-            type: KnowledgeSourceType.website,
-            url: 'https://tutorials.example.com',
-            autoUpdate: true,
-            createdAt: DateTime.now().subtract(const Duration(days: 20)),
-          ),
-        ];
-      });
+      // ✅ Load all knowledge bases from Knowledge API
+      final response = await _knowledgeService.getKnowledges(
+        order: 'DESC',
+        orderField: 'createdAt',
+        limit: 100, // Load up to 100 knowledges
+      );
+
+      if (response.data != null && response.data['data'] != null) {
+        final List<dynamic> data = response.data['data'];
+
+        setState(() {
+          _availableKnowledges = data.map((item) {
+            return KnowledgeSource(
+              id: item['id']?.toString() ?? '',
+              name: item['knowledgeName']?.toString() ?? 'Unnamed',
+              type: KnowledgeSourceType.localFiles, // Default type
+              autoUpdate: false,
+              createdAt: item['createdAt'] != null
+                  ? DateTime.parse(item['createdAt'])
+                  : DateTime.now(),
+            );
+          }).toList();
+        });
+
+        print('✅ Loaded ${_availableKnowledges.length} available knowledges');
+      }
     } catch (e) {
-      print('Error loading available knowledges: $e');
+      print('❌ Error loading available knowledges: $e');
+      // Keep empty list on error
+      setState(() => _availableKnowledges = []);
     }
   }
 
   Future<void> _addKnowledgeSources() async {
+    print('🔵 Add Knowledge button clicked');
+
+    // Navigate to Knowledge Management with selection mode enabled
+    final selectedKnowledges =
+        await Navigator.pushNamed(
+              context,
+              AppConstants.KnowledgeRoute,
+              arguments: {'selectionMode': true},
+            )
+            as List<KnowledgeBase>?;
+
+    print('🎯 Returned from Knowledge Management');
+    print('   Selected: ${selectedKnowledges?.length ?? 0} knowledge(s)');
+
+    // If user selected knowledges, import them
+    if (selectedKnowledges != null &&
+        selectedKnowledges.isNotEmpty &&
+        mounted) {
+      setState(() => _isLoadingKnowledges = true);
+
+      try {
+        // Import each selected knowledge to the bot
+        for (final knowledge in selectedKnowledges) {
+          print(
+            '📥 Importing knowledge: ${knowledge.name} (ID: ${knowledge.id})',
+          );
+          await _kbService.addKnowledgeToBot(
+            assistantId: _bot!.id,
+            knowledgeId: knowledge.id,
+          );
+        }
+
+        // Reload the bot's knowledge sources
+        await _loadBotKnowledges();
+
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(
+                'Successfully imported ${selectedKnowledges.length} knowledge(s) to bot',
+              ),
+              backgroundColor: Colors.green,
+              duration: const Duration(seconds: 3),
+            ),
+          );
+        }
+      } catch (e) {
+        setState(() => _isLoadingKnowledges = false);
+        print('❌ Error importing knowledges to bot: $e');
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Failed to import knowledges: ${e.toString()}'),
+              backgroundColor: Colors.red,
+              duration: const Duration(seconds: 4),
+              action: SnackBarAction(
+                label: 'Retry',
+                textColor: Colors.white,
+                onPressed: () => _addKnowledgeSources(),
+              ),
+            ),
+          );
+        }
+      }
+    }
+  }
+
+  // Kept for backward compatibility with AddKnowledgeDialog
+  Future<void> _addKnowledgeSourcesOld() async {
+    print('🔵 Add Knowledge button clicked (old flow)');
+
+    // Reload available knowledges first to get latest data
+    await _loadAvailableKnowledges();
+
+    print('   Available knowledges: ${_availableKnowledges.length}');
+    print('   Current knowledges: ${_botKnowledges.length}');
+
+    // Check if there are available knowledges
+    if (_availableKnowledges.isEmpty) {
+      // Show dialog to navigate to Knowledge Management Page
+      final shouldNavigate = await showDialog<bool>(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: const Text('No Knowledges Available'),
+          content: const Text(
+            'You haven\'t created any knowledges yet. Please create a knowledge in Knowledge Management first, then you can import it to your bot.',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context, false),
+              child: const Text('Cancel'),
+            ),
+            ElevatedButton(
+              onPressed: () => Navigator.pop(context, true),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppTheme.primaryBlue,
+              ),
+              child: const Text('Go to Knowledge Management'),
+            ),
+          ],
+        ),
+      );
+
+      if (shouldNavigate == true && mounted) {
+        // Navigate to Knowledge Management Page
+        await Navigator.pushNamed(context, AppConstants.KnowledgeRoute);
+
+        // Reload available knowledges after returning
+        if (mounted) {
+          await _loadAvailableKnowledges();
+        }
+      }
+      return;
+    }
+
     final selectedKnowledges = await showDialog<List<KnowledgeSource>>(
       context: context,
       builder: (context) => AddKnowledgeDialog(
@@ -207,6 +311,8 @@ class _BotDetailPageState extends State<BotDetailPage>
         currentKnowledges: _botKnowledges,
       ),
     );
+
+    print('🔵 Dialog closed, selected: ${selectedKnowledges?.length ?? 0}');
 
     if (selectedKnowledges != null && selectedKnowledges.isNotEmpty) {
       setState(() => _isLoadingKnowledges = true);
@@ -227,19 +333,27 @@ class _BotDetailPageState extends State<BotDetailPage>
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content: Text(
-                'Successfully added ${selectedKnowledges.length} knowledge source(s)',
+                'Successfully imported ${selectedKnowledges.length} knowledge(s) to bot',
               ),
               backgroundColor: Colors.green,
+              duration: const Duration(seconds: 3),
             ),
           );
         }
       } catch (e) {
         setState(() => _isLoadingKnowledges = false);
+        print('❌ Error importing knowledges to bot: $e');
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text('Error adding knowledge sources: $e'),
+              content: Text('Failed to import knowledges: ${e.toString()}'),
               backgroundColor: Colors.red,
+              duration: const Duration(seconds: 4),
+              action: SnackBarAction(
+                label: 'Retry',
+                textColor: Colors.white,
+                onPressed: () => _addKnowledgeSources(),
+              ),
             ),
           );
         }
@@ -556,49 +670,77 @@ class _BotDetailPageState extends State<BotDetailPage>
         const SizedBox(height: 16),
 
         // Knowledge Base Name (read-only display)
-        Container(
-          padding: const EdgeInsets.all(16),
-          decoration: BoxDecoration(
-            color: isDark ? AppTheme.navyBlue : Colors.grey[50],
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(
-              color: isDark ? Colors.grey[700]! : Colors.grey[200]!,
+        InkWell(
+          onTap: () async {
+            // Navigate to Knowledge Management Page
+            final result = await Navigator.pushNamed(
+              context,
+              AppConstants.KnowledgeRoute,
+            );
+
+            // Reload available knowledges after returning
+            if (result == true || result == null) {
+              await _loadAvailableKnowledges();
+            }
+          },
+          borderRadius: BorderRadius.circular(12),
+          child: Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: isDark ? AppTheme.navyBlue : Colors.grey[50],
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(
+                color: isDark ? Colors.grey[700]! : Colors.grey[200]!,
+              ),
             ),
-          ),
-          child: Row(
-            children: [
-              Icon(Icons.storage, color: AppTheme.primaryBlue),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      _bot!.knowledgeBaseName,
-                      style: TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w600,
-                        color: isDark ? Colors.white : Colors.black87,
+            child: Row(
+              children: [
+                Icon(Icons.storage, color: AppTheme.primaryBlue),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        _bot!.knowledgeBaseName,
+                        style: TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w600,
+                          color: isDark ? Colors.white : Colors.black87,
+                        ),
+                        overflow: TextOverflow.ellipsis,
                       ),
-                      overflow: TextOverflow.ellipsis,
+                      const SizedBox(height: 4),
+                      Text(
+                        '${_botKnowledges.length} knowledge source(s)',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: isDark ? Colors.grey[400] : Colors.grey[600],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                Column(
+                  children: [
+                    Icon(
+                      Icons.open_in_new,
+                      size: 18,
+                      color: AppTheme.primaryBlue,
                     ),
-                    const SizedBox(height: 4),
+                    const SizedBox(height: 2),
                     Text(
-                      '${_botKnowledges.length} knowledge source(s)',
+                      'Manage',
                       style: TextStyle(
-                        fontSize: 12,
-                        color: isDark ? Colors.grey[400] : Colors.grey[600],
+                        fontSize: 10,
+                        color: AppTheme.primaryBlue,
+                        fontWeight: FontWeight.w500,
                       ),
                     ),
                   ],
                 ),
-              ),
-              Icon(
-                Icons.chevron_right,
-                size: 20,
-                color: isDark ? Colors.grey[500] : Colors.grey[600],
-              ),
-            ],
+              ],
+            ),
           ),
         ),
 
@@ -627,7 +769,10 @@ class _BotDetailPageState extends State<BotDetailPage>
               ],
             ),
             TextButton.icon(
-              onPressed: _addKnowledgeSources,
+              onPressed: () {
+                print('🟢 Add button pressed in UI');
+                _addKnowledgeSources();
+              },
               icon: const Icon(Icons.add, size: 18),
               label: const Text('Add'),
               style: TextButton.styleFrom(
@@ -669,18 +814,56 @@ class _BotDetailPageState extends State<BotDetailPage>
                   'No knowledge sources added yet',
                   style: TextStyle(
                     fontSize: 14,
+                    fontWeight: FontWeight.w600,
                     color: isDark ? Colors.grey[400] : Colors.grey[600],
                   ),
                 ),
                 const SizedBox(height: 8),
-                OutlinedButton.icon(
-                  onPressed: _addKnowledgeSources,
-                  icon: const Icon(Icons.add),
-                  label: const Text('Add Knowledge Source'),
-                  style: OutlinedButton.styleFrom(
-                    foregroundColor: AppTheme.primaryBlue,
-                    side: const BorderSide(color: AppTheme.primaryBlue),
+                Text(
+                  'Add knowledge sources to make your bot smarter',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: isDark ? Colors.grey[500] : Colors.grey[500],
                   ),
+                ),
+                const SizedBox(height: 16),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    OutlinedButton.icon(
+                      onPressed: () async {
+                        // Navigate to Knowledge Management Page (normal mode to create)
+                        await Navigator.pushNamed(
+                          context,
+                          AppConstants.KnowledgeRoute,
+                        );
+                        // Reload and show selection mode automatically
+                        await _addKnowledgeSources();
+                      },
+                      icon: const Icon(Icons.create, size: 18),
+                      label: const Text('Create New'),
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: AppTheme.primaryBlue,
+                        side: const BorderSide(color: AppTheme.primaryBlue),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    ElevatedButton.icon(
+                      onPressed: () {
+                        print(
+                          '🟢 Add Knowledge Source button pressed (empty state)',
+                        );
+                        _addKnowledgeSources();
+                      },
+                      icon: const Icon(Icons.add, size: 18),
+                      label: const Text('Import Existing'),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppTheme.primaryBlue,
+                        foregroundColor: Colors.white,
+                      ),
+                    ),
+                  ],
                 ),
               ],
             ),
@@ -1598,7 +1781,7 @@ class _BotDetailPageState extends State<BotDetailPage>
         _previewMessages.add(
           PreviewMessage(
             text:
-                'Hi! I\'m ${_bot!.name}. ${_bot!.description ?? "I\'m here to help you"}. How can I help you today?',
+                'Hi! I\'m ${_bot!.name}. ${_bot!.description ?? "I'm here to help you"}. How can I help you today?',
             isUser: false,
             timestamp: DateTime.now(),
           ),
