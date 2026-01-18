@@ -163,6 +163,15 @@ class _ChatPageState extends State<ChatPage> {
       return;
     }
 
+    // Set Jarvis GUID for AI Chat API
+    final userId = _authService.getUserId();
+    if (userId != null && userId.isNotEmpty) {
+      _aiChatRepo.setJarvisGuid(userId);
+      print('✅ Set Jarvis GUID: $userId');
+    } else {
+      print('⚠️ No User ID found for Jarvis GUID');
+    }
+
     // Load user bots
     await _loadUserBots();
 
@@ -461,6 +470,26 @@ class _ChatPageState extends State<ChatPage> {
           );
           fileUrls.add(fileUrl);
           print('✅ Image uploaded: $fileUrl');
+
+          // Validate URL
+          if (!fileUrl.startsWith('http')) {
+            throw Exception('Invalid image URL format');
+          }
+
+          // Check if model supports vision
+          final supportsVision = _modelSupportsVision(_selectedModelId);
+          if (!supportsVision) {
+            print('⚠️ Model $_selectedModelId may not support images');
+            if (mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text('This model may not support images. Trying...'),
+                  backgroundColor: Colors.orange,
+                  duration: Duration(seconds: 2),
+                ),
+              );
+            }
+          }
         } catch (e) {
           print('❌ Image upload failed: $e');
           if (mounted) {
@@ -471,7 +500,7 @@ class _ChatPageState extends State<ChatPage> {
               ),
             );
           }
-          // Continue without image
+          // Continue without image on error
         }
       }
 
@@ -650,6 +679,21 @@ class _ChatPageState extends State<ChatPage> {
     }
   }
 
+  // Check if model supports vision/images
+  bool _modelSupportsVision(String modelId) {
+    final visionModels = [
+      'claude-3-5-sonnet-20240620',
+      'claude-3-5-haiku',
+      'claude-3-opus-20240229',
+      'gpt-4o',
+      'gpt-4-vision-preview',
+      'gemini-1.5-pro-latest',
+      'gemini-1.5-pro',
+      'gemini-1.5-flash-latest',
+    ];
+    return visionModels.contains(modelId.toLowerCase());
+  }
+
   void _scrollToBottom() {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (_scrollController.hasClients) {
@@ -680,23 +724,10 @@ class _ChatPageState extends State<ChatPage> {
 
     setState(() {
       _useKBChat = isCustomBot;
-
-      // Only add message here if there's no pending image
-      // If there's an image, _sendMessage will handle adding the message
-      if (_pendingImagePath == null) {
-        _messages.add(
-          ChatMessage(
-            content: message,
-            isUser: true,
-            timestamp: DateTime.now(),
-            modelId: _selectedModelId,
-            messageId: 'm${DateTime.now().millisecondsSinceEpoch}',
-          ),
-        );
-      }
     });
 
-    _messageController.clear();
+    // Note: Don't add message here - _sendMessage() will handle it
+    // This prevents duplicate messages
     _sendMessage(message);
   }
 

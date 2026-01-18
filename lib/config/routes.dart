@@ -31,7 +31,7 @@ class AppRoutes {
     AppConstants.createGroupRoute: (context) => const CreateGroupPage(),
     AppConstants.promptListRoute: (context) => const PromptListPage(),
     AppConstants.createEmailRoute: (context) => const CreateEmailPage(),
-    AppConstants.KnowledgeRoute: (context) => const KnowledgeListPage(),
+    // KnowledgeRoute handled in onGenerateRoute to support arguments
   };
 
   static Route<dynamic>? onGenerateRoute(RouteSettings settings) {
@@ -70,6 +70,14 @@ class AppRoutes {
       case AppConstants.createBotRoute:
         return MaterialPageRoute(
           builder: (context) => const CreateBotPage(),
+          settings: settings,
+        );
+      case AppConstants.KnowledgeRoute:
+        // Support selection mode for importing knowledges to bot
+        final args = settings.arguments as Map<String, dynamic>?;
+        final selectionMode = args?['selectionMode'] as bool? ?? false;
+        return MaterialPageRoute(
+          builder: (context) => KnowledgeListPage(selectionMode: selectionMode),
           settings: settings,
         );
       case AppConstants.botDetailRoute:
