@@ -1,24 +1,29 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/cupertino.dart';
 import '../../data/models/knowledge_base.dart';
-import '../../../services/knowledge_service.dart';
-import '../widgets/knowledge_item.dart';
-import '../widgets/create_knowledge_dialog.dart';
-import '../widgets/edit_knowledge_dialog.dart';
-import '../pages/knowledge_detail_page.dart';
+import '../../data/models/knowledge_unit.dart';
+import '../widgets/knowledge_unit_item.dart';
+import '../widgets/add_knowledge_unit_dialog.dart';
+import '../widgets/import_local_files_dialog.dart';
+import '../widgets/import_website_dialog.dart';
+import '../widgets/import_google_drive_dialog.dart';
+import '../widgets/import_slack_dialog.dart';
+import '../widgets/import_confluence_dialog.dart';
 
-class KnowledgeListPage extends StatefulWidget {
-  const KnowledgeListPage({super.key});
+class KnowledgeDetailPage extends StatefulWidget {
+  final KnowledgeBase knowledge;
+
+  const KnowledgeDetailPage({super.key, required this.knowledge});
 
   @override
-  State<KnowledgeListPage> createState() => _KnowledgeListPageState();
+  State<KnowledgeDetailPage> createState() => _KnowledgeDetailPageState();
 }
 
-class _KnowledgeListPageState extends State<KnowledgeListPage> {
+class _KnowledgeDetailPageState extends State<KnowledgeDetailPage> {
   final TextEditingController _searchController = TextEditingController();
-  final KnowledgeService _knowledgeService = KnowledgeService();
 
-  List<KnowledgeBase> _knowledgeBases = [];
+  List<KnowledgeUnit> _allUnits = []; // Store all units
+  List<KnowledgeUnit> _knowledgeUnits = []; // Filtered units
   String _searchQuery = '';
   bool _isLoading = false;
   String? _errorMessage;
@@ -34,7 +39,7 @@ class _KnowledgeListPageState extends State<KnowledgeListPage> {
   @override
   void initState() {
     super.initState();
-    _loadKnowledgeBases();
+    _loadKnowledgeUnits();
   }
 
   @override
@@ -43,156 +48,152 @@ class _KnowledgeListPageState extends State<KnowledgeListPage> {
     super.dispose();
   }
 
-  /// Safe setState - only call if mounted
   void _safeSetState(VoidCallback fn) {
     if (mounted) {
       setState(fn);
     }
   }
 
-  /// Load knowledge bases from API
-  Future<void> _loadKnowledgeBases() async {
+  /// Load mock knowledge units
+  Future<void> _loadKnowledgeUnits() async {
     _safeSetState(() {
       _isLoading = true;
       _errorMessage = null;
     });
 
+    // Simulate API delay
+    await Future.delayed(const Duration(milliseconds: 800));
+
+    if (!mounted) return;
+
     try {
-      final response = await _knowledgeService.getKnowledges(
-        query: _searchQuery.isEmpty ? null : _searchQuery,
-        order: 'DESC',
-        orderField: 'createdAt',
-        offset: 0,
-        limit: 20,
-      );
+      // 🎯 MOCK DATA - Replace with API call later
+      final mockUnits = [
+        KnowledgeUnit(
+          id: '1',
+          knowledgeId: widget.knowledge.id,
+          name: 'Product Documentation.pdf',
+          type: 'pdf',
+          status: 'active',
+          sizeInBytes: 2547896, // 2.4 MB
+          createdAt: DateTime.now().subtract(const Duration(days: 5)),
+        ),
+        KnowledgeUnit(
+          id: '2',
+          knowledgeId: widget.knowledge.id,
+          name: 'Company Website Content',
+          type: 'website',
+          status: 'active',
+          sizeInBytes: 1234567, // 1.2 MB
+          createdAt: DateTime.now().subtract(const Duration(days: 3)),
+        ),
+        KnowledgeUnit(
+          id: '3',
+          knowledgeId: widget.knowledge.id,
+          name: 'Team Meeting Notes Q4',
+          type: 'google_drive',
+          status: 'processing',
+          sizeInBytes: 456789, // 446 KB
+          createdAt: DateTime.now().subtract(const Duration(days: 2)),
+        ),
+        KnowledgeUnit(
+          id: '4',
+          knowledgeId: widget.knowledge.id,
+          name: '#general Channel History',
+          type: 'slack',
+          status: 'active',
+          sizeInBytes: 3456789, // 3.3 MB
+          createdAt: DateTime.now().subtract(const Duration(days: 1)),
+        ),
+        KnowledgeUnit(
+          id: '5',
+          knowledgeId: widget.knowledge.id,
+          name: 'Project Wiki & Guidelines',
+          type: 'confluence',
+          status: 'failed',
+          sizeInBytes: 987654, // 964 KB
+          createdAt: DateTime.now().subtract(const Duration(hours: 12)),
+        ),
+        KnowledgeUnit(
+          id: '6',
+          knowledgeId: widget.knowledge.id,
+          name: 'Design System Documentation',
+          type: 'notion',
+          status: 'active',
+          sizeInBytes: 2345678, // 2.2 MB
+          createdAt: DateTime.now().subtract(const Duration(hours: 6)),
+        ),
+        KnowledgeUnit(
+          id: '7',
+          knowledgeId: widget.knowledge.id,
+          name: 'API Reference Guide v2.1.pdf',
+          type: 'document',
+          status: 'active',
+          sizeInBytes: 5678901, // 5.4 MB
+          createdAt: DateTime.now().subtract(const Duration(hours: 3)),
+        ),
+        KnowledgeUnit(
+          id: '8',
+          knowledgeId: widget.knowledge.id,
+          name: 'Tech Blog Articles Collection',
+          type: 'website',
+          status: 'processing',
+          sizeInBytes: 4567890, // 4.4 MB
+          createdAt: DateTime.now().subtract(const Duration(hours: 1)),
+        ),
+      ];
 
-      if (!mounted) return; // ✅ Check before processing response
-
-      if (response.data != null && response.data['data'] != null) {
-        final List<dynamic> data = response.data['data'];
-        _safeSetState(() {
-          _knowledgeBases = data.map((item) {
-            return KnowledgeBase(
-              id:
-                  item['id']?.toString() ??
-                  '', // ✅ Changed from 'knowledgeId' to 'id'
-              name: item['knowledgeName']?.toString() ?? '',
-              description: item['description']?.toString() ?? '',
-              unitCount:
-                  item['numUnits'] ??
-                  0, // ✅ Changed from 'unitCount' to 'numUnits'
-              sizeInBytes:
-                  item['totalSize'] ??
-                  0, // ✅ Changed from 'size' to 'totalSize'
-              createdAt: item['createdAt'] != null
-                  ? DateTime.parse(item['createdAt'])
-                  : DateTime.now(),
-              updatedAt: item['updatedAt'] != null
-                  ? DateTime.parse(item['updatedAt'])
-                  : DateTime.now(),
-            );
-          }).toList();
-          _isLoading = false;
-        });
-      } else {
-        _safeSetState(() {
-          _knowledgeBases = [];
-          _isLoading = false;
-        });
-      }
+      _safeSetState(() {
+        _allUnits = mockUnits;
+        _filterUnits();
+        _isLoading = false;
+      });
     } catch (e) {
-      if (!mounted) return; // ✅ Check before showing error
+      if (!mounted) return;
 
       _safeSetState(() {
         _errorMessage = e.toString().replaceAll('Exception: ', '');
         _isLoading = false;
       });
-      _showSnackBar('Error loading data: $_errorMessage', isError: true);
+      _showSnackBar('Error loading units: $_errorMessage', isError: true);
     }
   }
 
-  List<KnowledgeBase> get filteredKnowledgeBases {
-    return _knowledgeBases;
+  /// Filter units based on search query
+  void _filterUnits() {
+    if (_searchQuery.isEmpty) {
+      _knowledgeUnits = List.from(_allUnits);
+    } else {
+      final query = _searchQuery.toLowerCase();
+      _knowledgeUnits = _allUnits.where((unit) {
+        return unit.name.toLowerCase().contains(query) ||
+            unit.type.toLowerCase().contains(query) ||
+            unit.status.toLowerCase().contains(query);
+      }).toList();
+    }
   }
 
-  /// Handle create knowledge
-  Future<void> _handleCreate() async {
-    final result = await showDialog<Map<String, String>>(
+  void _onAddKnowledgeUnitPressed() async {
+    final source = await showModalBottomSheet<String>(
       context: context,
-      builder: (_) => const CreateKnowledgeDialog(),
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (_) => const AddKnowledgeUnitDialog(),
     );
 
-    if (result != null && mounted) {
-      _safeSetState(() => _isLoading = true);
-
-      try {
-        final response = await _knowledgeService.createKnowledge(
-          knowledgeName: result['name']!,
-          description: result['description']!,
-        );
-
-        if (!mounted) return; // ✅ Check after async operation
-
-        if (response.statusCode == 201 || response.statusCode == 200) {
-          _showSnackBar('Knowledge base created successfully');
-          await _loadKnowledgeBases();
-        }
-      } catch (e) {
-        if (!mounted) return; // ✅ Check before showing error
-
-        _safeSetState(() => _isLoading = false);
-        _showSnackBar(
-          'Failed to create: ${e.toString().replaceAll('Exception: ', '')}',
-          isError: true,
-        );
-      }
+    if (source != null && mounted) {
+      await _handleSourceTap(context, source);
     }
   }
 
-  /// Handle edit knowledge
-  Future<void> _handleEdit(KnowledgeBase kb) async {
-    final result = await showDialog<Map<String, String>>(
-      context: context,
-      builder: (_) => EditKnowledgeDialog(knowledge: kb),
-    );
-
-    if (result != null && mounted) {
-      _safeSetState(() => _isLoading = true);
-
-      try {
-        final response = await _knowledgeService.updateKnowledge(
-          kb.id,
-          knowledgeName: result['name']!,
-          description: result['description']!,
-        );
-
-        if (!mounted) return; // ✅ Check after async operation
-
-        if (response.statusCode == 200) {
-          _showSnackBar('Knowledge base updated successfully');
-          await _loadKnowledgeBases();
-        }
-      } catch (e) {
-        if (!mounted) return; // ✅ Check before showing error
-
-        _safeSetState(() => _isLoading = false);
-        _showSnackBar(
-          'Failed to update: ${e.toString().replaceAll('Exception: ', '')}',
-          isError: true,
-        );
-      }
-    }
-  }
-
-  /// Handle delete knowledge
-  Future<void> _handleDelete(KnowledgeBase kb) async {
+  Future<void> _handleDeleteUnit(KnowledgeUnit unit) async {
     final confirm = await showDialog<bool>(
       context: context,
       builder: (ctx) => CupertinoAlertDialog(
-        title: const Text('Delete Knowledge Base'),
+        title: const Text('Delete Knowledge Unit'),
         content: Padding(
           padding: const EdgeInsets.only(top: 8),
-          child: Text('Are you sure you want to delete "${kb.name}"?'),
+          child: Text('Are you sure you want to delete "${unit.name}"?'),
         ),
         actions: [
           CupertinoDialogAction(
@@ -211,28 +212,24 @@ class _KnowledgeListPageState extends State<KnowledgeListPage> {
     if (confirm == true && mounted) {
       _safeSetState(() => _isLoading = true);
 
-      try {
-        await _knowledgeService.deleteKnowledge(kb.id);
+      // Simulate API delay
+      await Future.delayed(const Duration(milliseconds: 500));
 
-        if (!mounted) return; // ✅ Check after async operation
+      if (!mounted) return;
 
-        _showSnackBar('Knowledge base deleted successfully');
-        await _loadKnowledgeBases();
-      } catch (e) {
-        if (!mounted) return; // ✅ Check before showing error
+      // 🎯 MOCK: Remove from list
+      _safeSetState(() {
+        _allUnits.removeWhere((u) => u.id == unit.id);
+        _filterUnits();
+        _isLoading = false;
+      });
 
-        _safeSetState(() => _isLoading = false);
-        _showSnackBar(
-          'Failed to delete: ${e.toString().replaceAll('Exception: ', '')}',
-          isError: true,
-        );
-      }
+      _showSnackBar('Knowledge unit deleted successfully');
     }
   }
 
-  /// Show snackbar message
   void _showSnackBar(String message, {bool isError = false}) {
-    if (!mounted) return; // ✅ Check before showing snackbar
+    if (!mounted) return;
 
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
@@ -245,17 +242,41 @@ class _KnowledgeListPageState extends State<KnowledgeListPage> {
     );
   }
 
-  /// Handle search with debounce
   void _handleSearch(String value) {
-    _safeSetState(() => _searchQuery = value);
-
-    // Debounce search to avoid too many API calls
-    Future.delayed(const Duration(milliseconds: 500), () {
-      if (!mounted) return; // ✅ Check before loading
-      if (_searchQuery == value) {
-        _loadKnowledgeBases();
-      }
+    _safeSetState(() {
+      _searchQuery = value;
+      _filterUnits();
     });
+  }
+
+  Future<void> _handleSourceTap(BuildContext context, String source) async {
+    Widget dialog;
+
+    switch (source) {
+      case 'local_files':
+        dialog = const ImportLocalFilesDialog();
+        break;
+      case 'website':
+        dialog = const ImportWebsiteDialog();
+        break;
+      case 'google_drive':
+        dialog = const ImportGoogleDriveDialog();
+        break;
+      case 'slack':
+        dialog = const ImportSlackDialog();
+        break;
+      case 'confluence':
+        dialog = const ImportConfluenceDialog();
+        break;
+      default:
+        return;
+    }
+
+    final result = await showDialog(context: context, builder: (_) => dialog);
+
+    if (result != null) {
+      // Handle import result
+    }
   }
 
   @override
@@ -265,33 +286,49 @@ class _KnowledgeListPageState extends State<KnowledgeListPage> {
       appBar: AppBar(
         elevation: 0,
         backgroundColor: cardWhite,
-        centerTitle: false,
-        title: const Text(
-          'Knowledge Base',
-          style: TextStyle(
-            color: textDark,
-            fontWeight: FontWeight.w700,
-            fontSize: 24,
-            letterSpacing: -0.5,
-          ),
+        leading: IconButton(
+          icon: const Icon(CupertinoIcons.back, color: textDark),
+          onPressed: () => Navigator.pop(context),
         ),
-        iconTheme: const IconThemeData(color: primaryBlue),
-        shadowColor: Colors.black.withOpacity(0.05),
+        title: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              widget.knowledge.name,
+              style: const TextStyle(
+                color: textDark,
+                fontWeight: FontWeight.w700,
+                fontSize: 18,
+                letterSpacing: -0.5,
+              ),
+            ),
+            Text(
+              widget.knowledge.description,
+              style: TextStyle(
+                color: textGray.withOpacity(0.8),
+                fontSize: 12,
+                fontWeight: FontWeight.w400,
+              ),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ],
+        ),
         actions: [
           IconButton(
-            icon: const Icon(CupertinoIcons.refresh, color: primaryBlue),
-            onPressed: _isLoading ? null : _loadKnowledgeBases,
+            icon: const Icon(CupertinoIcons.xmark, color: textDark),
+            onPressed: () => Navigator.pop(context),
           ),
         ],
       ),
       body: Column(
         children: [
-          // Create Button
+          // Add Knowledge Unit Button
           Padding(
             padding: const EdgeInsets.all(16),
             child: CupertinoButton(
               padding: EdgeInsets.zero,
-              onPressed: _isLoading ? null : _handleCreate,
+              onPressed: _isLoading ? null : _onAddKnowledgeUnitPressed,
               child: Container(
                 width: double.infinity,
                 height: 56,
@@ -322,7 +359,7 @@ class _KnowledgeListPageState extends State<KnowledgeListPage> {
                     ),
                     SizedBox(width: 12),
                     Text(
-                      'Create Knowledge',
+                      'Add Knowledge Unit',
                       style: TextStyle(
                         fontSize: 17,
                         fontWeight: FontWeight.w600,
@@ -357,7 +394,7 @@ class _KnowledgeListPageState extends State<KnowledgeListPage> {
                 onChanged: _handleSearch,
                 enabled: !_isLoading,
                 decoration: InputDecoration(
-                  hintText: 'Search knowledge base',
+                  hintText: 'Search knowledge units...',
                   hintStyle: TextStyle(
                     color: textGray.withOpacity(0.6),
                     fontSize: 15,
@@ -392,34 +429,27 @@ class _KnowledgeListPageState extends State<KnowledgeListPage> {
 
           const SizedBox(height: 16),
 
-          // Knowledge Base List
+          // Knowledge Units List
           Expanded(
             child: _isLoading
                 ? _buildLoadingState()
                 : _errorMessage != null
                 ? _buildErrorState()
-                : filteredKnowledgeBases.isEmpty
+                : _knowledgeUnits.isEmpty
                 ? _buildEmptyState()
                 : RefreshIndicator(
-                    onRefresh: _loadKnowledgeBases,
+                    onRefresh: _loadKnowledgeUnits,
                     child: ListView.builder(
                       padding: const EdgeInsets.symmetric(horizontal: 16),
-                      itemCount: filteredKnowledgeBases.length,
+                      itemCount: _knowledgeUnits.length,
                       itemBuilder: (context, index) {
-                        final kb = filteredKnowledgeBases[index];
-                        return KnowledgeItem(
-                          knowledge: kb,
+                        final unit = _knowledgeUnits[index];
+                        return KnowledgeUnitItem(
+                          unit: unit,
                           onTap: () {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (_) =>
-                                    KnowledgeDetailPage(knowledge: kb),
-                              ),
-                            );
+                            _showSnackBar('Opening: ${unit.name}');
                           },
-                          onEdit: () => _handleEdit(kb),
-                          onDelete: () => _handleDelete(kb),
+                          onDelete: () => _handleDeleteUnit(unit),
                         );
                       },
                     ),
@@ -473,7 +503,7 @@ class _KnowledgeListPageState extends State<KnowledgeListPage> {
           ),
           const SizedBox(height: 24),
           CupertinoButton(
-            onPressed: _loadKnowledgeBases,
+            onPressed: _loadKnowledgeUnits,
             child: const Text('Retry'),
           ),
         ],
@@ -487,23 +517,25 @@ class _KnowledgeListPageState extends State<KnowledgeListPage> {
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           Container(
-            width: 80,
-            height: 80,
+            width: 120,
+            height: 120,
             decoration: BoxDecoration(
               color: primaryBlue.withOpacity(0.1),
-              borderRadius: BorderRadius.circular(20),
+              borderRadius: BorderRadius.circular(24),
             ),
             child: Icon(
               _searchQuery.isNotEmpty
                   ? CupertinoIcons.search
-                  : CupertinoIcons.layers_alt,
-              size: 40,
+                  : CupertinoIcons.doc_text_search,
+              size: 60,
               color: primaryBlue,
             ),
           ),
           const SizedBox(height: 24),
           Text(
-            _searchQuery.isNotEmpty ? 'No Results Found' : 'No Knowledge Bases',
+            _searchQuery.isNotEmpty
+                ? 'No knowledge units found'
+                : 'No knowledge units found',
             style: const TextStyle(
               fontSize: 20,
               fontWeight: FontWeight.w600,
@@ -512,12 +544,19 @@ class _KnowledgeListPageState extends State<KnowledgeListPage> {
             ),
           ),
           const SizedBox(height: 8),
-          Text(
-            _searchQuery.isNotEmpty
-                ? 'Try adjusting your search'
-                : 'Create your first knowledge base to get started',
-            style: TextStyle(fontSize: 15, color: textGray.withOpacity(0.8)),
-            textAlign: TextAlign.center,
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 48),
+            child: Text(
+              _searchQuery.isNotEmpty
+                  ? 'Try adjusting your search'
+                  : 'Click here to add new knowledge',
+              style: TextStyle(
+                fontSize: 15,
+                color: primaryBlue,
+                fontWeight: FontWeight.w500,
+              ),
+              textAlign: TextAlign.center,
+            ),
           ),
         ],
       ),
