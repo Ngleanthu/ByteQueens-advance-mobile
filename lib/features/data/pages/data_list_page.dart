@@ -8,7 +8,9 @@ import '../widgets/edit_knowledge_dialog.dart';
 import '../pages/knowledge_detail_page.dart';
 
 class KnowledgeListPage extends StatefulWidget {
-  const KnowledgeListPage({super.key});
+  final bool selectionMode;
+
+  const KnowledgeListPage({super.key, this.selectionMode = false});
 
   @override
   State<KnowledgeListPage> createState() => _KnowledgeListPageState();
@@ -19,6 +21,7 @@ class _KnowledgeListPageState extends State<KnowledgeListPage> {
   final KnowledgeService _knowledgeService = KnowledgeService();
 
   List<KnowledgeBase> _knowledgeBases = [];
+  Set<String> _selectedKnowledgeIds = {}; // Track selected knowledge IDs
   String _searchQuery = '';
   bool _isLoading = false;
   String? _errorMessage;
@@ -266,9 +269,9 @@ class _KnowledgeListPageState extends State<KnowledgeListPage> {
         elevation: 0,
         backgroundColor: cardWhite,
         centerTitle: false,
-        title: const Text(
-          'Knowledge Base',
-          style: TextStyle(
+        title: Text(
+          widget.selectionMode ? 'Select Knowledge' : 'Knowledge Base',
+          style: const TextStyle(
             color: textDark,
             fontWeight: FontWeight.w700,
             fontSize: 24,
@@ -407,19 +410,40 @@ class _KnowledgeListPageState extends State<KnowledgeListPage> {
                       itemCount: filteredKnowledgeBases.length,
                       itemBuilder: (context, index) {
                         final kb = filteredKnowledgeBases[index];
+                        final isSelected = _selectedKnowledgeIds.contains(
+                          kb.id,
+                        );
+
                         return KnowledgeItem(
                           knowledge: kb,
+                          isSelected: widget.selectionMode ? isSelected : null,
                           onTap: () {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (_) =>
-                                    KnowledgeDetailPage(knowledge: kb),
-                              ),
-                            );
+                            if (widget.selectionMode) {
+                              // Toggle selection
+                              setState(() {
+                                if (isSelected) {
+                                  _selectedKnowledgeIds.remove(kb.id);
+                                } else {
+                                  _selectedKnowledgeIds.add(kb.id);
+                                }
+                              });
+                            } else {
+                              // Navigate to detail page
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (_) =>
+                                      KnowledgeDetailPage(knowledge: kb),
+                                ),
+                              );
+                            }
                           },
-                          onEdit: () => _handleEdit(kb),
-                          onDelete: () => _handleDelete(kb),
+                          onEdit: widget.selectionMode
+                              ? null
+                              : () => _handleEdit(kb),
+                          onDelete: widget.selectionMode
+                              ? null
+                              : () => _handleDelete(kb),
                         );
                       },
                     ),
@@ -427,6 +451,30 @@ class _KnowledgeListPageState extends State<KnowledgeListPage> {
           ),
         ],
       ),
+      floatingActionButton:
+          widget.selectionMode && _selectedKnowledgeIds.isNotEmpty
+          ? Container(
+              margin: const EdgeInsets.only(bottom: 16),
+              child: FloatingActionButton.extended(
+                onPressed: () {
+                  // Return selected knowledge list
+                  final selectedKnowledges = _knowledgeBases
+                      .where((kb) => _selectedKnowledgeIds.contains(kb.id))
+                      .toList();
+                  Navigator.pop(context, selectedKnowledges);
+                },
+                backgroundColor: primaryBlue,
+                icon: const Icon(Icons.check),
+                label: Text(
+                  'Add (${_selectedKnowledgeIds.length})',
+                  style: const TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+            )
+          : null,
     );
   }
 

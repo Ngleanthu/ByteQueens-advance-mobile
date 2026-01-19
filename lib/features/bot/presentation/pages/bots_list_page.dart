@@ -223,6 +223,14 @@ class _BotsListPageState extends State<BotsListPage> {
         actions: [
           IconButton(
             icon: Icon(
+              Icons.refresh,
+              color: isDark ? Colors.white : AppTheme.darkBlue,
+            ),
+            onPressed: () => _loadBots(forceRefresh: true),
+            tooltip: 'Refresh',
+          ),
+          IconButton(
+            icon: Icon(
               Icons.more_vert,
               color: isDark ? Colors.white : AppTheme.darkBlue,
             ),
@@ -632,10 +640,7 @@ class _BotsListPageState extends State<BotsListPage> {
                     Navigator.pushNamed(
                       context,
                       AppConstants.chatRoute,
-                      arguments: {
-                        'modelId': bot.id,
-                        'modelName': bot.name,
-                      },
+                      arguments: {'modelId': bot.id, 'modelName': bot.name},
                     );
                   },
                   icon: const Icon(Icons.chat, size: 18),

@@ -5,15 +5,18 @@ import '../../data/models/knowledge_base.dart';
 class KnowledgeItem extends StatelessWidget {
   final KnowledgeBase knowledge;
   final VoidCallback onTap;
-  final VoidCallback onEdit;
-  final VoidCallback onDelete;
+  final VoidCallback? onEdit;
+  final VoidCallback? onDelete;
+  final bool?
+  isSelected; // null = not in selection mode, true/false = selected state
 
   const KnowledgeItem({
     super.key,
     required this.knowledge,
     required this.onTap,
-    required this.onEdit,
-    required this.onDelete,
+    this.onEdit,
+    this.onDelete,
+    this.isSelected,
   });
 
   static const primaryBlue = Color(0xFF2196F3);
@@ -124,39 +127,62 @@ class KnowledgeItem extends StatelessWidget {
                   ),
                 ),
 
-                // Actions
-                Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    IconButton(
-                      icon: const Icon(
-                        CupertinoIcons.pencil,
+                // Actions or Checkbox
+                if (isSelected != null)
+                  // Selection mode - show checkbox
+                  Container(
+                    width: 24,
+                    height: 24,
+                    decoration: BoxDecoration(
+                      color: isSelected! ? primaryBlue : Colors.transparent,
+                      border: Border.all(
+                        color: isSelected! ? primaryBlue : borderColor,
+                        width: 2,
+                      ),
+                      borderRadius: BorderRadius.circular(6),
+                    ),
+                    child: isSelected!
+                        ? const Icon(Icons.check, color: Colors.white, size: 16)
+                        : null,
+                  )
+                else
+                  // Normal mode - show actions
+                  Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      if (onEdit != null) ...[
+                        IconButton(
+                          icon: const Icon(
+                            CupertinoIcons.pencil,
+                            size: 20,
+                            color: textGray,
+                          ),
+                          onPressed: onEdit,
+                          padding: EdgeInsets.zero,
+                          constraints: const BoxConstraints(),
+                        ),
+                        const SizedBox(width: 4),
+                      ],
+                      if (onDelete != null) ...[
+                        IconButton(
+                          icon: const Icon(
+                            CupertinoIcons.trash,
+                            size: 20,
+                            color: Colors.red,
+                          ),
+                          onPressed: onDelete,
+                          padding: EdgeInsets.zero,
+                          constraints: const BoxConstraints(),
+                        ),
+                        const SizedBox(width: 4),
+                      ],
+                      const Icon(
+                        CupertinoIcons.chevron_right,
                         size: 20,
                         color: textGray,
                       ),
-                      onPressed: onEdit,
-                      padding: EdgeInsets.zero,
-                      constraints: const BoxConstraints(),
-                    ),
-                    const SizedBox(width: 4),
-                    IconButton(
-                      icon: const Icon(
-                        CupertinoIcons.trash,
-                        size: 20,
-                        color: Colors.red,
-                      ),
-                      onPressed: onDelete,
-                      padding: EdgeInsets.zero,
-                      constraints: const BoxConstraints(),
-                    ),
-                    const SizedBox(width: 4),
-                    const Icon(
-                      CupertinoIcons.chevron_right,
-                      size: 20,
-                      color: textGray,
-                    ),
-                  ],
-                ),
+                    ],
+                  ),
               ],
             ),
           ),

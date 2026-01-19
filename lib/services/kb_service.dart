@@ -429,8 +429,8 @@ class KBService {
     return await _executeWithRetry<bool>(() async {
       final response = await _dio.post(endpoint);
 
-      if (response.statusCode == 200) {
-        // API returns TRUE for success
+      if (response.statusCode == 200 || response.statusCode == 204) {
+        // API returns 200 or 204 for success
         return true;
       } else {
         throw ApiException.fromStatusCode(
@@ -457,8 +457,8 @@ class KBService {
     return await _executeWithRetry<bool>(() async {
       final response = await _dio.delete(endpoint);
 
-      if (response.statusCode == 200) {
-        // API returns TRUE for success
+      if (response.statusCode == 200 || response.statusCode == 204) {
+        // API returns 200 or 204 for success
         return true;
       } else {
         throw ApiException.fromStatusCode(
@@ -467,6 +467,36 @@ class KBService {
             response,
             AppConstants.knowledgeRemoveError,
           ),
+          endpoint: endpoint,
+        );
+      }
+    }, endpoint: endpoint);
+  }
+
+  /// Get bot's knowledge list
+  /// GET /ai-assistant/{assistantId}/knowledges
+  Future<List<Map<String, dynamic>>> getBotKnowledges({
+    required String assistantId,
+  }) async {
+    _initializeKBDio();
+
+    final endpoint = '/ai-assistant/$assistantId/knowledges';
+
+    return await _executeWithRetry<List<Map<String, dynamic>>>(() async {
+      final response = await _dio.get(endpoint);
+
+      if (response.statusCode == 200) {
+        final data = response.data;
+        if (data is List) {
+          return data.cast<Map<String, dynamic>>();
+        } else if (data is Map && data.containsKey('data')) {
+          return (data['data'] as List).cast<Map<String, dynamic>>();
+        }
+        return [];
+      } else {
+        throw ApiException.fromStatusCode(
+          statusCode: response.statusCode ?? 500,
+          message: _getErrorMessage(response, 'Failed to fetch bot knowledges'),
           endpoint: endpoint,
         );
       }
