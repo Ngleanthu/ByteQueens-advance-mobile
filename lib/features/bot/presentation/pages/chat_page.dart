@@ -680,20 +680,6 @@ class _ChatPageState extends State<ChatPage> {
 
     setState(() {
       _useKBChat = isCustomBot;
-
-      // Only add message here if there's no pending image
-      // If there's an image, _sendMessage will handle adding the message
-      if (_pendingImagePath == null) {
-        _messages.add(
-          ChatMessage(
-            content: message,
-            isUser: true,
-            timestamp: DateTime.now(),
-            modelId: _selectedModelId,
-            messageId: 'm${DateTime.now().millisecondsSinceEpoch}',
-          ),
-        );
-      }
     });
 
     _messageController.clear();
