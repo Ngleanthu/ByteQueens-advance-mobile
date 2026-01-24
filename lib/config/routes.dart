@@ -14,6 +14,7 @@ import 'package:bytequeens_adm/features/bot/presentation/pages/chat_page.dart';
 import 'package:bytequeens_adm/features/group/presentation/pages/groups_list_page.dart';
 import 'package:bytequeens_adm/features/group/presentation/pages/create_group_page.dart';
 import 'package:bytequeens_adm/features/prompt/presentation/pages/prompt_list_page.dart';
+import 'package:bytequeens_adm/features/subscription/presentation/pages/pricing_page.dart';
 import 'package:bytequeens_adm/features/data/pages/data_list_page.dart';
 
 class AppRoutes {
@@ -31,6 +32,7 @@ class AppRoutes {
     AppConstants.createGroupRoute: (context) => const CreateGroupPage(),
     AppConstants.promptListRoute: (context) => const PromptListPage(),
     AppConstants.createEmailRoute: (context) => const CreateEmailPage(),
+    AppConstants.pricingRoute: (context) => const PricingPage(),
     AppConstants.KnowledgeRoute: (context) => const KnowledgeListPage(),
   };
 
