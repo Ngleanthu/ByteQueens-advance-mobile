@@ -11,11 +11,11 @@ class ChatImageWidget extends StatelessWidget {
   final bool isUserMessage;
 
   const ChatImageWidget({
-    Key? key,
+    super.key,
     this.localImagePath,
     this.imageExpired = false,
     this.isUserMessage = false,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {

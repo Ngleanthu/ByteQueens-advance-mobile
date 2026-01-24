@@ -5,6 +5,8 @@ import 'package:bytequeens_adm/services/bot_service.dart';
 import 'package:bytequeens_adm/data/models/ai_model.dart';
 import 'package:bytequeens_adm/data/models/knowledge_source.dart';
 import 'package:bytequeens_adm/data/models/api_exception.dart';
+import 'package:bytequeens_adm/features/data/models/knowledge_base.dart';
+import 'package:bytequeens_adm/features/data/pages/data_list_page.dart';
 
 class CreateBotPage extends StatefulWidget {
   const CreateBotPage({super.key});
@@ -215,179 +217,66 @@ class _CreateBotPageState extends State<CreateBotPage> {
     }
   }
 
-  void _showKnowledgeSourceSelector() {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: Colors.transparent,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
-      builder: (context) => Container(
-        decoration: BoxDecoration(
-          color: isDark ? AppTheme.navyBlue : Colors.white,
-          borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
-        ),
-        child: SafeArea(
-          child: SingleChildScrollView(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Padding(
-                  padding: const EdgeInsets.all(16),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text(
-                        AppConstants.knowledgeSources,
-                        style: TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                          color: isDark ? Colors.white : AppTheme.darkBlue,
-                        ),
-                      ),
-                      IconButton(
-                        icon: Icon(
-                          Icons.close,
-                          color: isDark ? Colors.white70 : Colors.black54,
-                        ),
-                        onPressed: () => Navigator.pop(context),
-                      ),
-                    ],
-                  ),
-                ),
-                Divider(
-                  height: 1,
-                  color: isDark ? Colors.grey[800] : Colors.grey[300],
-                ),
-                _buildKnowledgeSourceItem(
-                  Icons.description,
-                  AppConstants.localFiles,
-                  AppConstants.localFilesDesc,
-                  KnowledgeSourceType.localFiles,
-                  isDark,
-                ),
-                _buildKnowledgeSourceItem(
-                  Icons.language,
-                  AppConstants.website,
-                  AppConstants.websiteDesc,
-                  KnowledgeSourceType.website,
-                  isDark,
-                ),
-                _buildKnowledgeSourceItem(
-                  Icons.folder,
-                  AppConstants.googleDrive,
-                  AppConstants.googleDriveDesc,
-                  KnowledgeSourceType.googleDrive,
-                  isDark,
-                ),
-                _buildKnowledgeSourceItem(
-                  Icons.chat,
-                  AppConstants.slack,
-                  AppConstants.slackDesc,
-                  KnowledgeSourceType.slack,
-                  isDark,
-                ),
-                _buildKnowledgeSourceItem(
-                  Icons.article,
-                  AppConstants.confluence,
-                  AppConstants.confluenceDesc,
-                  KnowledgeSourceType.confluence,
-                  isDark,
-                ),
-                _buildKnowledgeSourceItem(
-                  Icons.note,
-                  AppConstants.notion,
-                  AppConstants.notionDesc,
-                  KnowledgeSourceType.notion,
-                  isDark,
-                ),
-                const SizedBox(height: 16),
-              ],
-            ),
-          ),
-        ),
+  void _navigateToSelectKnowledge() async {
+    // Navigate to KnowledgeListPage in selection mode
+    final selectedKnowledge = await Navigator.push<List<KnowledgeBase>>(
+      context,
+      MaterialPageRoute(
+        builder: (context) => KnowledgeListPage(selectionMode: true),
       ),
     );
-  }
 
-  Widget _buildKnowledgeSourceItem(
-    IconData icon,
-    String title,
-    String subtitle,
-    KnowledgeSourceType type,
-    bool isDark,
-  ) {
-    return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-      decoration: BoxDecoration(
-        color: isDark ? Colors.grey[850] : Colors.grey[50],
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(
-          color: isDark ? Colors.grey[800]! : Colors.grey[200]!,
-        ),
-      ),
-      child: ListTile(
-        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-        leading: Container(
-          padding: const EdgeInsets.all(10),
-          decoration: BoxDecoration(
-            color: AppTheme.primaryBlue.withOpacity(0.1),
-            borderRadius: BorderRadius.circular(10),
+    if (selectedKnowledge != null && selectedKnowledge.isNotEmpty) {
+      int addedCount = 0;
+      int duplicateCount = 0;
+
+      for (var kb in selectedKnowledge) {
+        // Check if not already added
+        if (!_knowledgeSources.any((s) => s.id == kb.id)) {
+          final source = KnowledgeSource(
+            id: kb.id,
+            name: kb.name,
+            type: KnowledgeSourceType.localFiles, // Default type
+            createdAt: kb.createdAt,
+            url: null,
+          );
+
+          setState(() {
+            _knowledgeSources.add(source);
+          });
+          addedCount++;
+        } else {
+          duplicateCount++;
+        }
+      }
+
+      // Show result notification
+      if (mounted) {
+        String message;
+        Color bgColor;
+
+        if (addedCount > 0 && duplicateCount == 0) {
+          message =
+              'Added $addedCount knowledge source${addedCount > 1 ? 's' : ''}';
+          bgColor = Colors.green;
+        } else if (addedCount > 0 && duplicateCount > 0) {
+          message =
+              'Added $addedCount, skipped $duplicateCount duplicate${duplicateCount > 1 ? 's' : ''}';
+          bgColor = Colors.orange;
+        } else {
+          message = 'All selected items are already added';
+          bgColor = Colors.orange;
+        }
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(message),
+            backgroundColor: bgColor,
+            duration: const Duration(seconds: 2),
           ),
-          child: Icon(icon, color: AppTheme.primaryBlue, size: 24),
-        ),
-        title: Text(
-          title,
-          style: TextStyle(
-            fontWeight: FontWeight.w600,
-            fontSize: 15,
-            color: isDark ? Colors.white : Colors.black87,
-          ),
-        ),
-        subtitle: Padding(
-          padding: const EdgeInsets.only(top: 4),
-          child: Text(
-            subtitle,
-            style: TextStyle(
-              fontSize: 13,
-              color: isDark ? Colors.grey[400] : Colors.grey[600],
-            ),
-          ),
-        ),
-        trailing: Icon(
-          Icons.arrow_forward_ios,
-          size: 16,
-          color: isDark ? Colors.grey[600] : Colors.grey[400],
-        ),
-        onTap: () {
-          Navigator.pop(context);
-          _showAddSourceDialog(type);
-        },
-      ),
-    );
-  }
-
-  void _showAddSourceDialog(KnowledgeSourceType type) {
-    // Mock: Just add a sample source
-    final source = KnowledgeSource(
-      id: DateTime.now().millisecondsSinceEpoch.toString(),
-      name: '${type.toString().split('.').last} source',
-      type: type,
-      createdAt: DateTime.now(),
-    );
-
-    setState(() {
-      _knowledgeSources.add(source);
-    });
-
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('${source.getTypeName()} added'),
-        backgroundColor: Colors.green,
-      ),
-    );
+        );
+      }
+    }
   }
 
   @override
@@ -648,11 +537,11 @@ class _CreateBotPageState extends State<CreateBotPage> {
                         ],
                       ),
                     );
-                  }).toList(),
+                  }),
 
                 // Add knowledge source button
                 OutlinedButton.icon(
-                  onPressed: _showKnowledgeSourceSelector,
+                  onPressed: _navigateToSelectKnowledge,
                   icon: const Icon(Icons.add),
                   label: const Text(AppConstants.addKnowledgeSource),
                   style: OutlinedButton.styleFrom(

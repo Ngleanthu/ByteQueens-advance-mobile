@@ -1,5 +1,6 @@
 /// Knowledge Base Knowledge Models
 /// Models for knowledge sources and their management
+library;
 
 /// KB Knowledge - Represents a knowledge source/unit
 class KBKnowledge {

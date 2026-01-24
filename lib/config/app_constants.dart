@@ -77,6 +77,9 @@ class AppConstants {
   // Routes - Subscription
   static const String pricingRoute = '/pricing';
   
+
+  //Routes - Data
+  static const String KnowledgeRoute = '/knowledges';
   // Messages - Auth
   static const String loginPrompt = 'Log in to get 50 free Credits every day';
   static const String loginWithEmail = 'Log in with Email';

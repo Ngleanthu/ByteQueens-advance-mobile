@@ -7,7 +7,9 @@ import 'package:bytequeens_adm/services/kb_chat_service.dart';
 import 'package:bytequeens_adm/data/models/bot.dart';
 import 'package:bytequeens_adm/data/models/knowledge_source.dart';
 import 'package:bytequeens_adm/data/models/api_exception.dart';
-import 'package:bytequeens_adm/features/bot/presentation/widgets/add_knowledge_dialog.dart';
+import 'package:bytequeens_adm/features/data/models/knowledge_base.dart';
+import 'package:bytequeens_adm/features/data/pages/data_list_page.dart';
+import 'package:bytequeens_adm/features/data/pages/knowledge_detail_page.dart';
 import 'package:bytequeens_adm/features/bot/presentation/pages/publish_bot_page.dart';
 
 class BotDetailPage extends StatefulWidget {
@@ -84,7 +86,7 @@ class _BotDetailPageState extends State<BotDetailPage>
         _previewMessages.add(
           PreviewMessage(
             text:
-                'Hi! I\'m ${bot.name}. ${bot.description ?? "I\'m here to help you"}. How can I help you today?',
+                'Hi! I\'m ${bot.name}. ${bot.description ?? "I'm here to help you"}. How can I help you today?',
             isUser: false,
             timestamp: DateTime.now(),
           ),
@@ -119,17 +121,39 @@ class _BotDetailPageState extends State<BotDetailPage>
     setState(() => _isLoadingKnowledges = true);
 
     try {
-      // Mock data for now - Replace with actual API call when available
-      // final knowledges = await _kbService.getBotKnowledges(_bot!.id);
+      // Call API to get bot's knowledges
+      final knowledgesData = await _kbService.getBotKnowledges(
+        assistantId: _bot!.id,
+      );
 
-      // For now, use mock data based on bot's knowledgeBaseName
+      // Convert API response to KnowledgeSource list
+      final knowledges = knowledgesData.map((data) {
+        return KnowledgeSource(
+          id: data['id'] as String? ?? '',
+          name: data['knowledgeName'] as String? ?? 'Unknown Knowledge',
+          type: KnowledgeSourceType.localFiles,
+          createdAt: data['createdAt'] != null
+              ? DateTime.parse(data['createdAt'] as String)
+              : DateTime.now(),
+          url: null,
+        );
+      }).toList();
+
       setState(() {
-        _botKnowledges = _generateMockKnowledges();
+        _botKnowledges = knowledges;
         _isLoadingKnowledges = false;
       });
     } catch (e) {
       setState(() => _isLoadingKnowledges = false);
       print('Error loading bot knowledges: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to load knowledge sources: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
     }
   }
 
@@ -200,15 +224,27 @@ class _BotDetailPageState extends State<BotDetailPage>
   }
 
   Future<void> _addKnowledgeSources() async {
-    final selectedKnowledges = await showDialog<List<KnowledgeSource>>(
-      context: context,
-      builder: (context) => AddKnowledgeDialog(
-        availableKnowledges: _availableKnowledges,
-        currentKnowledges: _botKnowledges,
+    // Navigate to KnowledgeListPage in selection mode
+    final selectedKnowledgeBases = await Navigator.push<List<KnowledgeBase>>(
+      context,
+      MaterialPageRoute(
+        builder: (context) => KnowledgeListPage(selectionMode: true),
       ),
     );
 
-    if (selectedKnowledges != null && selectedKnowledges.isNotEmpty) {
+    if (selectedKnowledgeBases != null && selectedKnowledgeBases.isNotEmpty) {
+      // Convert KnowledgeBase to KnowledgeSource
+      final selectedKnowledges = selectedKnowledgeBases
+          .map(
+            (kb) => KnowledgeSource(
+              id: kb.id,
+              name: kb.name,
+              type: KnowledgeSourceType.localFiles,
+              createdAt: kb.createdAt,
+              url: null,
+            ),
+          )
+          .toList();
       setState(() => _isLoadingKnowledges = true);
 
       try {
@@ -245,6 +281,26 @@ class _BotDetailPageState extends State<BotDetailPage>
         }
       }
     }
+  }
+
+  void _navigateToKnowledgeDetail(KnowledgeSource knowledge) {
+    // Convert KnowledgeSource to KnowledgeBase for navigation
+    final knowledgeBase = KnowledgeBase(
+      id: knowledge.id,
+      name: knowledge.name,
+      description: '',
+      unitCount: 0,
+      sizeInBytes: 0,
+      createdAt: knowledge.createdAt,
+      updatedAt: knowledge.createdAt,
+    );
+
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => KnowledgeDetailPage(knowledge: knowledgeBase),
+      ),
+    );
   }
 
   Future<void> _removeKnowledgeSource(KnowledgeSource knowledge) async {
@@ -859,146 +915,152 @@ class _BotDetailPageState extends State<BotDetailPage>
         borderRadius: BorderRadius.circular(12),
         side: BorderSide(color: isDark ? Colors.grey[800]! : Colors.grey[200]!),
       ),
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Row(
-          children: [
-            // Icon
-            Container(
-              padding: const EdgeInsets.all(10),
-              decoration: BoxDecoration(
-                color: AppTheme.primaryBlue.withValues(alpha: 0.1),
-                borderRadius: BorderRadius.circular(8),
+      child: InkWell(
+        onTap: () => _navigateToKnowledgeDetail(knowledge),
+        borderRadius: BorderRadius.circular(12),
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Row(
+            children: [
+              // Icon
+              Container(
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  color: AppTheme.primaryBlue.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Icon(
+                  _getKnowledgeIcon(knowledge.type),
+                  color: AppTheme.primaryBlue,
+                  size: 24,
+                ),
               ),
-              child: Icon(
-                _getKnowledgeIcon(knowledge.type),
-                color: AppTheme.primaryBlue,
-                size: 24,
-              ),
-            ),
-            const SizedBox(width: 12),
+              const SizedBox(width: 12),
 
-            // Info
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    knowledge.name,
-                    style: TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w600,
-                      color: isDark ? Colors.white : AppTheme.darkBlue,
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  Row(
-                    children: [
-                      Text(
-                        knowledge.getTypeName(),
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: isDark ? Colors.grey[400] : Colors.grey[600],
-                        ),
+              // Info
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      knowledge.name,
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                        color: isDark ? Colors.white : AppTheme.darkBlue,
                       ),
-                      if (knowledge.autoUpdate) ...[
-                        const SizedBox(width: 8),
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 6,
-                            vertical: 2,
+                    ),
+                    const SizedBox(height: 4),
+                    Row(
+                      children: [
+                        Text(
+                          knowledge.getTypeName(),
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: isDark ? Colors.grey[400] : Colors.grey[600],
                           ),
-                          decoration: BoxDecoration(
-                            color: Colors.green[50],
-                            borderRadius: BorderRadius.circular(4),
-                          ),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Icon(
-                                Icons.sync,
-                                size: 10,
-                                color: Colors.green[700],
-                              ),
-                              const SizedBox(width: 4),
-                              Text(
-                                'Auto',
-                                style: TextStyle(
-                                  fontSize: 10,
+                        ),
+                        if (knowledge.autoUpdate) ...[
+                          const SizedBox(width: 8),
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 6,
+                              vertical: 2,
+                            ),
+                            decoration: BoxDecoration(
+                              color: Colors.green[50],
+                              borderRadius: BorderRadius.circular(4),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(
+                                  Icons.sync,
+                                  size: 10,
                                   color: Colors.green[700],
-                                  fontWeight: FontWeight.w600,
                                 ),
-                              ),
-                            ],
+                                const SizedBox(width: 4),
+                                Text(
+                                  'Auto',
+                                  style: TextStyle(
+                                    fontSize: 10,
+                                    color: Colors.green[700],
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                              ],
+                            ),
                           ),
-                        ),
+                        ],
                       ],
+                    ),
+                    if (knowledge.url != null) ...[
+                      const SizedBox(height: 4),
+                      Text(
+                        knowledge.url!,
+                        style: TextStyle(
+                          fontSize: 11,
+                          color: isDark ? Colors.grey[500] : Colors.grey[500],
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
                     ],
-                  ),
-                  if (knowledge.url != null) ...[
-                    const SizedBox(height: 4),
-                    Text(
-                      knowledge.url!,
-                      style: TextStyle(
-                        fontSize: 11,
-                        color: isDark ? Colors.grey[500] : Colors.grey[500],
+                    if (knowledge.files != null &&
+                        knowledge.files!.isNotEmpty) ...[
+                      const SizedBox(height: 4),
+                      Text(
+                        '${knowledge.files!.length} file(s)',
+                        style: TextStyle(
+                          fontSize: 11,
+                          color: isDark ? Colors.grey[500] : Colors.grey[500],
+                        ),
                       ),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
+                    ],
                   ],
-                  if (knowledge.files != null &&
-                      knowledge.files!.isNotEmpty) ...[
-                    const SizedBox(height: 4),
-                    Text(
-                      '${knowledge.files!.length} file(s)',
-                      style: TextStyle(
-                        fontSize: 11,
-                        color: isDark ? Colors.grey[500] : Colors.grey[500],
-                      ),
-                    ),
-                  ],
-                ],
+                ),
               ),
-            ),
 
-            // Actions
-            PopupMenuButton(
-              icon: Icon(
-                Icons.more_vert,
-                color: isDark ? Colors.grey[400] : Colors.grey[600],
-                size: 20,
+              // Actions
+              PopupMenuButton(
+                icon: Icon(
+                  Icons.more_vert,
+                  color: isDark ? Colors.grey[400] : Colors.grey[600],
+                  size: 20,
+                ),
+                color: isDark ? AppTheme.navyBlue : Colors.white,
+                itemBuilder: (context) => [
+                  const PopupMenuItem(
+                    value: 'view',
+                    child: Row(
+                      children: [
+                        Icon(Icons.visibility, size: 18),
+                        SizedBox(width: 8),
+                        Text('View Details'),
+                      ],
+                    ),
+                  ),
+                  const PopupMenuItem(
+                    value: 'remove',
+                    child: Row(
+                      children: [
+                        Icon(Icons.delete, size: 18, color: Colors.red),
+                        SizedBox(width: 8),
+                        Text('Remove', style: TextStyle(color: Colors.red)),
+                      ],
+                    ),
+                  ),
+                ],
+                onSelected: (value) {
+                  if (value == 'view') {
+                    _navigateToKnowledgeDetail(knowledge);
+                  } else if (value == 'remove') {
+                    _removeKnowledgeSource(knowledge);
+                  }
+                },
               ),
-              color: isDark ? AppTheme.navyBlue : Colors.white,
-              itemBuilder: (context) => [
-                const PopupMenuItem(
-                  value: 'view',
-                  child: Row(
-                    children: [
-                      Icon(Icons.visibility, size: 18),
-                      SizedBox(width: 8),
-                      Text('View Details'),
-                    ],
-                  ),
-                ),
-                const PopupMenuItem(
-                  value: 'remove',
-                  child: Row(
-                    children: [
-                      Icon(Icons.delete, size: 18, color: Colors.red),
-                      SizedBox(width: 8),
-                      Text('Remove', style: TextStyle(color: Colors.red)),
-                    ],
-                  ),
-                ),
-              ],
-              onSelected: (value) {
-                if (value == 'remove') {
-                  _removeKnowledgeSource(knowledge);
-                }
-              },
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
@@ -1598,7 +1660,7 @@ class _BotDetailPageState extends State<BotDetailPage>
         _previewMessages.add(
           PreviewMessage(
             text:
-                'Hi! I\'m ${_bot!.name}. ${_bot!.description ?? "I\'m here to help you"}. How can I help you today?',
+                'Hi! I\'m ${_bot!.name}. ${_bot!.description ?? "I'm here to help you"}. How can I help you today?',
             isUser: false,
             timestamp: DateTime.now(),
           ),
