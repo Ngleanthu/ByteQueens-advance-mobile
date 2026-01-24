@@ -1,20 +1,29 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:bytequeens_adm/config/theme.dart';
 import 'package:bytequeens_adm/config/app_constants.dart';
 import 'package:bytequeens_adm/services/auth_service.dart';
 import 'package:bytequeens_adm/services/bot_service.dart';
 import 'package:bytequeens_adm/services/prompt_service.dart';
+import 'package:bytequeens_adm/services/waitlist_service.dart';
+import 'package:bytequeens_adm/services/calendar_booking_service.dart';
+import 'package:bytequeens_adm/services/google_drive_upload_service.dart';
+import 'package:bytequeens_adm/services/subscription_service.dart';
+import 'package:bytequeens_adm/services/ad_service.dart';
+import 'package:bytequeens_adm/data/models/subscription_models.dart';
 import 'package:bytequeens_adm/data/models/bot.dart';
 import 'package:bytequeens_adm/data/models/prompt.dart';
 import 'package:bytequeens_adm/app.dart';
 import 'package:bytequeens_adm/features/bot/presentation/widgets/chat_input_section.dart';
 import 'package:bytequeens_adm/features/bot/presentation/widgets/prompt_suggestion_overlay.dart';
+import 'package:bytequeens_adm/features/bot/presentation/widgets/calendar_booking_dialog.dart';
+import 'package:bytequeens_adm/features/bot/presentation/widgets/drive_upload_dialog.dart';
 import 'package:bytequeens_adm/features/bot/presentation/widgets/left_menu_drawer.dart';
 import 'package:bytequeens_adm/features/bot/presentation/pages/chat_page.dart';
 import 'package:bytequeens_adm/features/bot/presentation/pages/chat_history_page.dart';
 
 class HomePage extends StatefulWidget {
-  const HomePage({Key? key}) : super(key: key);
+  const HomePage({super.key});
 
   @override
   State<HomePage> createState() => _HomePageState();
@@ -24,18 +33,26 @@ class _HomePageState extends State<HomePage> {
   final _messageController = TextEditingController();
   final _botService = BotService();
   final _promptService = PromptService();
+  final _waitlistService = WaitlistService();
+  final _calendarService = CalendarBookingService();
+  final _driveUploadService = GoogleDriveUploadService();
+  final _subscriptionService = SubscriptionService();
   String _selectedModel = 'GPT-4o Mini';
   String _selectedModelId = 'gpt-4o-mini';
   List<Bot> _userBots = [];
   List<Prompt> _suggestedPrompts = [];
   bool _isMenuExpanded = true;
   bool _isLoadingPrompts = true;
+  TokenUsage? _tokenUsage;
+  SubscriptionPlan? _subscriptionPlan;
+  bool _isLoadingSubscription = true;
 
   @override
   void initState() {
     super.initState();
     _loadUserBots();
     _loadSuggestedPrompts();
+    _loadSubscriptionInfo();
   }
 
   Future<void> _loadUserBots() async {
@@ -68,11 +85,255 @@ class _HomePageState extends State<HomePage> {
     }
   }
 
+  Future<void> _loadSubscriptionInfo() async {
+    try {
+      final tokenUsage = await _subscriptionService.getTokenUsage();
+      final plan = await _subscriptionService.getSubscriptionPlan();
+
+      if (mounted) {
+        setState(() {
+          _tokenUsage = tokenUsage;
+          _subscriptionPlan = plan;
+          _isLoadingSubscription = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _isLoadingSubscription = false;
+        });
+      }
+    }
+  }
+
   void _handleModelChange(String modelId, String modelName) {
     setState(() {
       _selectedModelId = modelId;
       _selectedModel = modelName;
     });
+  }
+
+  Future<void> _handleJoinWaitlist() async {
+    final userEmail = AuthService().getCurrentUserEmail();
+    if (userEmail == null) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Please login to join the waitlist'),
+            backgroundColor: Colors.orange,
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+      return;
+    }
+
+    // Show loading indicator
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => const Center(
+        child: CircularProgressIndicator(
+          valueColor: AlwaysStoppedAnimation<Color>(AppTheme.primaryBlue),
+        ),
+      ),
+    );
+
+    try {
+      final response = await _waitlistService.addToWaitlist(email: userEmail);
+
+      if (mounted) {
+        Navigator.pop(context); // Close loading dialog
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(response.message),
+            backgroundColor: response.success ? Colors.green : Colors.red,
+            behavior: SnackBarBehavior.floating,
+            duration: const Duration(seconds: 4),
+            action: response.success
+                ? SnackBarAction(
+                    label: 'OK',
+                    textColor: Colors.white,
+                    onPressed: () {},
+                  )
+                : null,
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        Navigator.pop(context); // Close loading dialog
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('An error occurred. Please try again later.'),
+            backgroundColor: Colors.red,
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+    }
+  }
+
+  void _handleBookCalendar() {
+    showDialog(
+      context: context,
+      builder: (context) => CalendarBookingDialog(
+        onConfirm: (title, description, dateTime, duration) async {
+          _createCalendarEvent(title, description, dateTime, duration);
+        },
+      ),
+    );
+  }
+
+  Future<void> _createCalendarEvent(
+    String title,
+    String description,
+    DateTime dateTime,
+    int duration,
+  ) async {
+    final userEmail = AuthService().getCurrentUserEmail();
+    if (userEmail == null) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Please login to create calendar event'),
+            backgroundColor: Colors.orange,
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+      return;
+    }
+
+    // Show loading indicator
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => const Center(
+        child: CircularProgressIndicator(
+          valueColor: AlwaysStoppedAnimation<Color>(AppTheme.primaryBlue),
+        ),
+      ),
+    );
+
+    try {
+      final response = await _calendarService.createEvent(
+        email: userEmail,
+        title: title,
+        description: description,
+        startDateTime: dateTime,
+        durationMinutes: duration,
+      );
+
+      if (mounted) {
+        Navigator.pop(context); // Close loading dialog
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(response.message),
+            backgroundColor: response.success ? Colors.green : Colors.red,
+            behavior: SnackBarBehavior.floating,
+            duration: const Duration(seconds: 4),
+            action: response.success
+                ? SnackBarAction(
+                    label: 'OK',
+                    textColor: Colors.white,
+                    onPressed: () {},
+                  )
+                : null,
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        Navigator.pop(context); // Close loading dialog
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('An error occurred. Please try again later.'),
+            backgroundColor: Colors.red,
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+    }
+  }
+
+  void _handleUploadToDrive() {
+    showDialog(
+      context: context,
+      builder: (context) => DriveUploadDialog(
+        onConfirm: (file, folderName) async {
+          _uploadFileToDrive(file, folderName);
+        },
+      ),
+    );
+  }
+
+  Future<void> _uploadFileToDrive(File file, String? folderName) async {
+    final userEmail = AuthService().getCurrentUserEmail();
+    if (userEmail == null) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Please login to upload files'),
+            backgroundColor: Colors.orange,
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+      return;
+    }
+
+    // Show loading indicator
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => const Center(
+        child: CircularProgressIndicator(
+          valueColor: AlwaysStoppedAnimation<Color>(Colors.green),
+        ),
+      ),
+    );
+
+    try {
+      final response = await _driveUploadService.uploadFile(
+        email: userEmail,
+        file: file,
+        folderName: folderName,
+      );
+
+      if (mounted) {
+        Navigator.pop(context); // Close loading dialog
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(response.message),
+            backgroundColor: response.success ? Colors.green : Colors.red,
+            behavior: SnackBarBehavior.floating,
+            duration: const Duration(seconds: 4),
+            action: response.success
+                ? SnackBarAction(
+                    label: 'OK',
+                    textColor: Colors.white,
+                    onPressed: () {},
+                  )
+                : null,
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        Navigator.pop(context); // Close loading dialog
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('An error occurred. Please try again later.'),
+            backgroundColor: Colors.red,
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+    }
   }
 
   @override
@@ -103,6 +364,31 @@ class _HomePageState extends State<HomePage> {
                 onTap: () {
                   Navigator.pop(context);
                   // Already on home, so just close menu
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.email, color: Colors.white),
+                title: const Text(
+                  'Create Email',
+                  style: TextStyle(color: Colors.white),
+                ),
+                onTap: () {
+                  Navigator.pop(context);
+                  Navigator.pushNamed(context, AppConstants.createEmailRoute);
+                },
+              ),
+              ListTile(
+                leading: const Icon(
+                  Icons.dataset_linked_outlined,
+                  color: Colors.white,
+                ),
+                title: const Text(
+                  'Data',
+                  style: TextStyle(color: Colors.white),
+                ),
+                onTap: () {
+                  Navigator.pop(context);
+                  Navigator.pushNamed(context, AppConstants.KnowledgeRoute);
                 },
               ),
               ListTile(
@@ -346,16 +632,47 @@ class _HomePageState extends State<HomePage> {
                                     ),
                                     const SizedBox(height: 32),
 
-                                    Container(
-                                      padding: const EdgeInsets.all(24),
-                                      decoration: BoxDecoration(
-                                        color: isDark
-                                            ? AppTheme.navyBlue
-                                            : Colors.grey[100],
-                                        borderRadius: BorderRadius.circular(16),
-                                      ),
-                                      child: Column(
+                                    // Upgrade to Pro Section - Only show for Free users
+                                    if (_tokenUsage?.isPro != true)
+                                      Container(
+                                        padding: const EdgeInsets.all(24),
+                                        decoration: BoxDecoration(
+                                          gradient: LinearGradient(
+                                            colors: [
+                                              AppTheme.primaryBlue.withOpacity(0.1),
+                                              AppTheme.primaryBlue.withOpacity(0.05),
+                                            ],
+                                            begin: Alignment.topLeft,
+                                            end: Alignment.bottomRight,
+                                          ),
+                                          borderRadius: BorderRadius.circular(16),
+                                          border: Border.all(
+                                            color: AppTheme.primaryBlue.withOpacity(0.3),
+                                            width: 1.5,
+                                          ),
+                                        ),
+                                        child: Column(
                                         children: [
+                                          Row(
+                                            mainAxisAlignment: MainAxisAlignment.center,
+                                            children: [
+                                              Icon(
+                                                Icons.workspace_premium,
+                                                color: AppTheme.primaryBlue,
+                                                size: 28,
+                                              ),
+                                              const SizedBox(width: 12),
+                                              Text(
+                                                'Jarvis Pro',
+                                                style: TextStyle(
+                                                  fontSize: 24,
+                                                  fontWeight: FontWeight.bold,
+                                                  color: AppTheme.primaryBlue,
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                          const SizedBox(height: 16),
                                           Text(
                                             AppConstants.upgradePro,
                                             textAlign: TextAlign.center,
@@ -365,97 +682,365 @@ class _HomePageState extends State<HomePage> {
                                               color: isDark
                                                   ? Colors.white
                                                   : AppTheme.darkBlue,
-                                            ),
-                                          ),
-                                          const SizedBox(height: 12),
-                                          RichText(
-                                            text: TextSpan(
-                                              text:
-                                                  AppConstants.orInviteFriends +
-                                                  ' ',
-                                              style: TextStyle(
-                                                fontSize: 14,
-                                                color: isDark
-                                                    ? Colors.grey[400]
-                                                    : Colors.grey[600],
-                                              ),
-                                              children: [
-                                                TextSpan(
-                                                  text:
-                                                      AppConstants.freePremium,
-                                                  style: TextStyle(
-                                                    color: AppTheme.primaryBlue,
-                                                    fontWeight: FontWeight.w600,
-                                                  ),
-                                                ),
-                                                TextSpan(text: '.'),
-                                              ],
+                                              height: 1.4,
                                             ),
                                           ),
                                           const SizedBox(height: 20),
-                                          Row(
-                                            children: [
-                                              Expanded(
-                                                child: ElevatedButton(
-                                                  onPressed: () {},
-                                                  style: ElevatedButton.styleFrom(
-                                                    backgroundColor:
-                                                        AppTheme.primaryBlue,
-                                                    padding:
-                                                        const EdgeInsets.symmetric(
-                                                          vertical: 14,
-                                                        ),
-                                                    shape: RoundedRectangleBorder(
-                                                      borderRadius:
-                                                          BorderRadius.circular(
-                                                            12,
-                                                          ),
-                                                    ),
-                                                  ),
-                                                  child: const Text(
-                                                    AppConstants.startFreeTrial,
-                                                    style: TextStyle(
-                                                      fontSize: 14,
-                                                      fontWeight:
-                                                          FontWeight.w600,
-                                                      color: Colors.white,
-                                                    ),
-                                                  ),
+                                          // Pro Benefits
+                                          _buildProBenefit(
+                                            Icons.all_inclusive,
+                                            'Unlimited tokens',
+                                            isDark,
+                                          ),
+                                          const SizedBox(height: 12),
+                                          _buildProBenefit(
+                                            Icons.flash_on,
+                                            'Priority access to new features',
+                                            isDark,
+                                          ),
+                                          const SizedBox(height: 12),
+                                          _buildProBenefit(
+                                            Icons.support_agent,
+                                            'Premium support',
+                                            isDark,
+                                          ),
+                                          const SizedBox(height: 24),
+                                          // Show current plan if loaded
+                                          if (!_isLoadingSubscription && _subscriptionPlan != null)
+                                            Container(
+                                              padding: const EdgeInsets.symmetric(
+                                                horizontal: 16,
+                                                vertical: 8,
+                                              ),
+                                              decoration: BoxDecoration(
+                                                color: _subscriptionPlan!.isPro
+                                                    ? Colors.green.withOpacity(0.1)
+                                                    : Colors.orange.withOpacity(0.1),
+                                                borderRadius: BorderRadius.circular(8),
+                                              ),
+                                              child: Text(
+                                                _subscriptionPlan!.isPro
+                                                    ? '✓ You have Pro Plan'
+                                                    : 'Current: ${_subscriptionPlan!.name} Plan',
+                                                style: TextStyle(
+                                                  fontSize: 14,
+                                                  fontWeight: FontWeight.w600,
+                                                  color: _subscriptionPlan!.isPro
+                                                      ? Colors.green[700]
+                                                      : Colors.orange[700],
                                                 ),
                                               ),
-                                              const SizedBox(width: 12),
-                                              Expanded(
-                                                child: OutlinedButton(
-                                                  onPressed: () {},
-                                                  style: OutlinedButton.styleFrom(
-                                                    padding:
-                                                        const EdgeInsets.symmetric(
-                                                          vertical: 14,
-                                                        ),
-                                                    side: BorderSide(
-                                                      color:
-                                                          AppTheme.primaryBlue,
-                                                    ),
-                                                    shape: RoundedRectangleBorder(
-                                                      borderRadius:
-                                                          BorderRadius.circular(
-                                                            12,
-                                                          ),
-                                                    ),
-                                                  ),
-                                                  child: const Text(
-                                                    AppConstants.inviteFriends,
-                                                    style: TextStyle(
-                                                      fontSize: 14,
-                                                      fontWeight:
-                                                          FontWeight.w600,
-                                                      color:
-                                                          AppTheme.primaryBlue,
-                                                    ),
-                                                  ),
+                                            ),
+                                          if (!_isLoadingSubscription && _subscriptionPlan != null)
+                                            const SizedBox(height: 16),
+                                          // Start Free Trial Button
+                                          SizedBox(
+                                            width: double.infinity,
+                                            child: ElevatedButton(
+                                              onPressed: _subscriptionPlan?.isPro == true
+                                                  ? null
+                                                  : () async {
+                                                      // Navigate to pricing page and reload when returned
+                                                      await Navigator.pushNamed(
+                                                        context,
+                                                        AppConstants.pricingRoute,
+                                                      );
+                                                      // Reload subscription info after returning
+                                                      _loadSubscriptionInfo();
+                                                    },
+                                              style: ElevatedButton.styleFrom(
+                                                backgroundColor: AppTheme.primaryBlue,
+                                                padding: const EdgeInsets.symmetric(
+                                                  vertical: 16,
+                                                ),
+                                                shape: RoundedRectangleBorder(
+                                                  borderRadius: BorderRadius.circular(12),
+                                                ),
+                                                elevation: 2,
+                                              ),
+                                              child: Text(
+                                                _subscriptionPlan?.isPro == true
+                                                    ? 'You\'re on Pro ✓'
+                                                    : AppConstants.startFreeTrial,
+                                                style: const TextStyle(
+                                                  fontSize: 16,
+                                                  fontWeight: FontWeight.bold,
+                                                  color: Colors.white,
                                                 ),
                                               ),
-                                            ],
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+
+                                    const SizedBox(height: 24),
+
+                                    // Waitlist Banner
+                                    Container(
+                                      padding: const EdgeInsets.all(20),
+                                      decoration: BoxDecoration(
+                                        gradient: const LinearGradient(
+                                          colors: [
+                                            Color(0xFFFFF3E0),
+                                            Color(0xFFFFE0B2),
+                                          ],
+                                          begin: Alignment.topLeft,
+                                          end: Alignment.bottomRight,
+                                        ),
+                                        borderRadius: BorderRadius.circular(16),
+                                        boxShadow: [
+                                          BoxShadow(
+                                            color: Colors.orange.withOpacity(
+                                              0.2,
+                                            ),
+                                            blurRadius: 12,
+                                            offset: const Offset(0, 4),
+                                          ),
+                                        ],
+                                      ),
+                                      child: Column(
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
+                                        children: [
+                                          const Text(
+                                            AppConstants.waitlistBannerTitle,
+                                            style: TextStyle(
+                                              fontSize: 18,
+                                              fontWeight: FontWeight.bold,
+                                              color: Color(0xFFE65100),
+                                            ),
+                                          ),
+                                          const SizedBox(height: 12),
+                                          const Text(
+                                            AppConstants
+                                                .waitlistBannerDescription,
+                                            style: TextStyle(
+                                              fontSize: 14,
+                                              color: Color(0xFF6D4C41),
+                                              height: 1.5,
+                                            ),
+                                          ),
+                                          const SizedBox(height: 16),
+                                          SizedBox(
+                                            width: double.infinity,
+                                            child: ElevatedButton(
+                                              onPressed: _handleJoinWaitlist,
+                                              style: ElevatedButton.styleFrom(
+                                                backgroundColor: const Color(
+                                                  0xFFFF6F00,
+                                                ),
+                                                foregroundColor: Colors.white,
+                                                padding:
+                                                    const EdgeInsets.symmetric(
+                                                      vertical: 14,
+                                                    ),
+                                                shape: RoundedRectangleBorder(
+                                                  borderRadius:
+                                                      BorderRadius.circular(12),
+                                                ),
+                                                elevation: 4,
+                                              ),
+                                              child: Row(
+                                                mainAxisAlignment:
+                                                    MainAxisAlignment.center,
+                                                children: const [
+                                                  Icon(
+                                                    Icons.email_outlined,
+                                                    size: 20,
+                                                  ),
+                                                  SizedBox(width: 8),
+                                                  Text(
+                                                    AppConstants.joinWaitlist,
+                                                    style: TextStyle(
+                                                      fontSize: 15,
+                                                      fontWeight:
+                                                          FontWeight.w600,
+                                                    ),
+                                                  ),
+                                                ],
+                                              ),
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+
+                                    const SizedBox(height: 24),
+
+                                    // Calendar Booking Banner
+                                    Container(
+                                      padding: const EdgeInsets.all(20),
+                                      decoration: BoxDecoration(
+                                        gradient: const LinearGradient(
+                                          colors: [
+                                            Color(0xFFE3F2FD),
+                                            Color(0xFFBBDEFB),
+                                          ],
+                                          begin: Alignment.topLeft,
+                                          end: Alignment.bottomRight,
+                                        ),
+                                        borderRadius: BorderRadius.circular(16),
+                                        boxShadow: [
+                                          BoxShadow(
+                                            color: AppTheme.primaryBlue
+                                                .withOpacity(0.2),
+                                            blurRadius: 12,
+                                            offset: const Offset(0, 4),
+                                          ),
+                                        ],
+                                      ),
+                                      child: Column(
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
+                                        children: [
+                                          const Text(
+                                            AppConstants.calendarBannerTitle,
+                                            style: TextStyle(
+                                              fontSize: 18,
+                                              fontWeight: FontWeight.bold,
+                                              color: Color(0xFF0D47A1),
+                                            ),
+                                          ),
+                                          const SizedBox(height: 12),
+                                          const Text(
+                                            AppConstants
+                                                .calendarBannerDescription,
+                                            style: TextStyle(
+                                              fontSize: 14,
+                                              color: Color(0xFF1565C0),
+                                              height: 1.5,
+                                            ),
+                                          ),
+                                          const SizedBox(height: 16),
+                                          SizedBox(
+                                            width: double.infinity,
+                                            child: ElevatedButton(
+                                              onPressed: _handleBookCalendar,
+                                              style: ElevatedButton.styleFrom(
+                                                backgroundColor:
+                                                    AppTheme.primaryBlue,
+                                                foregroundColor: Colors.white,
+                                                padding:
+                                                    const EdgeInsets.symmetric(
+                                                      vertical: 14,
+                                                    ),
+                                                shape: RoundedRectangleBorder(
+                                                  borderRadius:
+                                                      BorderRadius.circular(12),
+                                                ),
+                                                elevation: 4,
+                                              ),
+                                              child: Row(
+                                                mainAxisAlignment:
+                                                    MainAxisAlignment.center,
+                                                children: const [
+                                                  Icon(
+                                                    Icons.calendar_today,
+                                                    size: 20,
+                                                  ),
+                                                  SizedBox(width: 8),
+                                                  Text(
+                                                    AppConstants.bookCalendar,
+                                                    style: TextStyle(
+                                                      fontSize: 15,
+                                                      fontWeight:
+                                                          FontWeight.w600,
+                                                    ),
+                                                  ),
+                                                ],
+                                              ),
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+
+                                    const SizedBox(height: 24),
+
+                                    // Google Drive Upload Banner
+                                    Container(
+                                      padding: const EdgeInsets.all(20),
+                                      decoration: BoxDecoration(
+                                        gradient: const LinearGradient(
+                                          colors: [
+                                            Color(0xFFE8F5E9),
+                                            Color(0xFFC8E6C9),
+                                          ],
+                                          begin: Alignment.topLeft,
+                                          end: Alignment.bottomRight,
+                                        ),
+                                        borderRadius: BorderRadius.circular(16),
+                                        boxShadow: [
+                                          BoxShadow(
+                                            color: Colors.green.withOpacity(
+                                              0.2,
+                                            ),
+                                            blurRadius: 12,
+                                            offset: const Offset(0, 4),
+                                          ),
+                                        ],
+                                      ),
+                                      child: Column(
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
+                                        children: [
+                                          const Text(
+                                            AppConstants.driveUploadBannerTitle,
+                                            style: TextStyle(
+                                              fontSize: 18,
+                                              fontWeight: FontWeight.bold,
+                                              color: Color(0xFF1B5E20),
+                                            ),
+                                          ),
+                                          const SizedBox(height: 12),
+                                          const Text(
+                                            AppConstants
+                                                .driveUploadBannerDescription,
+                                            style: TextStyle(
+                                              fontSize: 14,
+                                              color: Color(0xFF2E7D32),
+                                              height: 1.5,
+                                            ),
+                                          ),
+                                          const SizedBox(height: 16),
+                                          SizedBox(
+                                            width: double.infinity,
+                                            child: ElevatedButton(
+                                              onPressed: _handleUploadToDrive,
+                                              style: ElevatedButton.styleFrom(
+                                                backgroundColor: Colors.green,
+                                                foregroundColor: Colors.white,
+                                                padding:
+                                                    const EdgeInsets.symmetric(
+                                                      vertical: 14,
+                                                    ),
+                                                shape: RoundedRectangleBorder(
+                                                  borderRadius:
+                                                      BorderRadius.circular(12),
+                                                ),
+                                                elevation: 4,
+                                              ),
+                                              child: Row(
+                                                mainAxisAlignment:
+                                                    MainAxisAlignment.center,
+                                                children: const [
+                                                  Icon(
+                                                    Icons.cloud_upload,
+                                                    size: 20,
+                                                  ),
+                                                  SizedBox(width: 8),
+                                                  Text(
+                                                    AppConstants.uploadToDrive,
+                                                    style: TextStyle(
+                                                      fontSize: 15,
+                                                      fontWeight:
+                                                          FontWeight.w600,
+                                                    ),
+                                                  ),
+                                                ],
+                                              ),
+                                            ),
                                           ),
                                         ],
                                       ),
@@ -604,13 +1189,24 @@ class _HomePageState extends State<HomePage> {
                               ),
                             ),
 
+                            // Banner Ad for Free users
+                            if (_tokenUsage?.isPro != true)
+                              Padding(
+                                padding: const EdgeInsets.symmetric(vertical: 16),
+                                child: AdBannerWidget(
+                                  onAdLoaded: () => print('✅ Banner ad loaded'),
+                                  onAdFailedToLoad: (error) =>
+                                      print('❌ Banner ad failed: $error'),
+                                ),
+                              ),
+
                             // New Chat Input Section Widget with Prompt Suggestions
                             PromptSuggestionOverlay(
                               messageController: _messageController,
                               child: ChatInputSection(
                                 messageController: _messageController,
                                 selectedModel: _selectedModel,
-                                freeMessagesRemaining: 45,
+                                tokenUsage: _tokenUsage,
                                 userBots: _userBots,
                                 onModelChanged: _handleModelChange,
                                 onSendMessage: () {
@@ -653,6 +1249,34 @@ class _HomePageState extends State<HomePage> {
                                 onNewChat: () {
                                   // Clear message input for new chat
                                   _messageController.clear();
+                                },
+                                onImageUpload: () {
+                                  // Navigate to chat page to handle image upload
+                                  Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (context) => ChatPage(
+                                        modelId: _selectedModelId,
+                                        modelName: _selectedModel,
+                                        shouldPickImage:
+                                            true, // Trigger image picker
+                                      ),
+                                    ),
+                                  );
+                                },
+                                onCameraCapture: () {
+                                  // Navigate to chat page to handle camera capture
+                                  Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (context) => ChatPage(
+                                        modelId: _selectedModelId,
+                                        modelName: _selectedModel,
+                                        shouldOpenCamera:
+                                            true, // Trigger camera
+                                      ),
+                                    ),
+                                  );
                                 },
                               ),
                             ),
@@ -724,6 +1348,41 @@ class _HomePageState extends State<HomePage> {
           modelName: _selectedModel,
         ),
       ),
+    );
+  }
+
+  Widget _buildProBenefit(IconData icon, String text, bool isDark) {
+    return Row(
+      children: [
+        Container(
+          padding: const EdgeInsets.all(8),
+          decoration: BoxDecoration(
+            color: AppTheme.primaryBlue.withOpacity(0.1),
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: Icon(
+            icon,
+            color: AppTheme.primaryBlue,
+            size: 20,
+          ),
+        ),
+        const SizedBox(width: 12),
+        Expanded(
+          child: Text(
+            text,
+            style: TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.w500,
+              color: isDark ? Colors.white : AppTheme.darkBlue,
+            ),
+          ),
+        ),
+        Icon(
+          Icons.check_circle,
+          color: Colors.green,
+          size: 20,
+        ),
+      ],
     );
   }
 }

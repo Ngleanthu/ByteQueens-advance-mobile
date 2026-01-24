@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:bytequeens_adm/config/theme.dart';
+import 'package:bytequeens_adm/config/app_constants.dart';
 import 'package:bytequeens_adm/data/models/bot.dart';
 import 'package:bytequeens_adm/data/models/ai_model.dart';
+import 'package:bytequeens_adm/data/models/subscription_models.dart';
 
 /// Complete chat input section widget with:
 /// - Top bar: Model selector + Create bot button | History icons
@@ -15,23 +17,27 @@ class ChatInputSection extends StatefulWidget {
   final VoidCallback? onCreateBot;
   final VoidCallback? onHistoryTap;
   final VoidCallback? onNewChat;
+  final Function()? onImageUpload;
+  final Function()? onCameraCapture;
   final String selectedModel;
-  final int freeMessagesRemaining;
+  final TokenUsage? tokenUsage;
   final List<Bot> userBots;
   final Function(String modelId, String modelName)? onModelChanged;
 
   const ChatInputSection({
-    Key? key,
+    super.key,
     required this.messageController,
     this.onSendMessage,
     this.onCreateBot,
     this.onHistoryTap,
     this.onNewChat,
+    this.onImageUpload,
+    this.onCameraCapture,
     this.selectedModel = 'GPT-4o Mini',
-    this.freeMessagesRemaining = 45,
+    this.tokenUsage,
     this.userBots = const [],
     this.onModelChanged,
-  }) : super(key: key);
+  });
 
   @override
   State<ChatInputSection> createState() => _ChatInputSectionState();
@@ -363,8 +369,12 @@ class _ChatInputSectionState extends State<ChatInputSection> {
                         mainAxisSize: MainAxisSize.min,
                         children: [
                           const Icon(Icons.add, size: 16, color: Colors.white),
-                            const SizedBox(width: 4),
-                          const Icon(Icons.smart_toy, size: 16, color: Colors.white), // icon bot
+                          const SizedBox(width: 4),
+                          const Icon(
+                            Icons.smart_toy,
+                            size: 16,
+                            color: Colors.white,
+                          ), // icon bot
                           if (!isCompact) ...[
                             const SizedBox(width: 4),
                             const Text(
@@ -440,14 +450,33 @@ class _ChatInputSectionState extends State<ChatInputSection> {
             ),
             child: Row(
               children: [
-                // Attachment icon
+                // Image upload icon
                 Tooltip(
-                  message: 'Attach File',
+                  message: 'Upload Image',
                   child: IconButton(
-                    icon: Icon(Icons.attach_file, size: 20, color: iconColor),
+                    icon: Icon(
+                      Icons.image_outlined,
+                      size: 20,
+                      color: iconColor,
+                    ),
                     padding: const EdgeInsets.all(8),
                     constraints: const BoxConstraints(),
-                    onPressed: () {},
+                    onPressed: widget.onImageUpload,
+                  ),
+                ),
+
+                // Camera icon
+                Tooltip(
+                  message: 'Take Photo',
+                  child: IconButton(
+                    icon: Icon(
+                      Icons.camera_alt_outlined,
+                      size: 20,
+                      color: iconColor,
+                    ),
+                    padding: const EdgeInsets.all(8),
+                    constraints: const BoxConstraints(),
+                    onPressed: widget.onCameraCapture,
                   ),
                 ),
 
@@ -551,40 +580,55 @@ class _ChatInputSectionState extends State<ChatInputSection> {
 
   /// Bottom bar showing free messages remaining
   Widget _buildBottomBar(bool isDark) {
+    final displayText = widget.tokenUsage?.displayTokens ?? '...';
+    final isPro = widget.tokenUsage?.isPro ?? false;
+
     return Padding(
       padding: const EdgeInsets.only(bottom: 8),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           Icon(
-            Icons.local_fire_department,
+            isPro ? Icons.workspace_premium : Icons.local_fire_department,
             size: 16,
-            color: AppTheme.primaryBlue,
+            color: isPro ? Colors.amber[700] : AppTheme.primaryBlue,
           ),
           const SizedBox(width: 4),
           Text(
-            '${widget.freeMessagesRemaining}',
-            style: const TextStyle(
+            displayText,
+            style: TextStyle(
               fontSize: 14,
               fontWeight: FontWeight.w600,
-              color: AppTheme.primaryBlue,
+              color: isPro ? Colors.amber[700] : AppTheme.primaryBlue,
             ),
           ),
+          if (!isPro) ...[
+            const SizedBox(width: 4),
+            Text(
+              AppConstants.tokensRemaining,
+              style: TextStyle(
+                fontSize: 13,
+                color: isDark ? Colors.grey[400] : Colors.grey[600],
+              ),
+            ),
+          ],
           const SizedBox(width: 8),
-          Text(
-            'Upgrade',
-            style: TextStyle(
-              fontSize: 13,
-              fontWeight: FontWeight.w500,
-              color: isDark ? Colors.grey[400] : Colors.grey[600],
-              decoration: TextDecoration.underline,
+          if (!isPro) ...[
+            Text(
+              AppConstants.upgradeForMore,
+              style: TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.w500,
+                color: isDark ? Colors.grey[400] : Colors.grey[600],
+                decoration: TextDecoration.underline,
+              ),
             ),
-          ),
-          Icon(
-            Icons.arrow_forward,
-            size: 14,
-            color: isDark ? Colors.grey[400] : Colors.grey[600],
-          ),
+            Icon(
+              Icons.arrow_forward,
+              size: 14,
+              color: isDark ? Colors.grey[400] : Colors.grey[600],
+            ),
+          ],
         ],
       ),
     );

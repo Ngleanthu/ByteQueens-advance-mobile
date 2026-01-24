@@ -1,4 +1,5 @@
 /// Models for authentication API requests and responses
+library;
 
 /// Sign Up Request Model
 class SignUpRequest {

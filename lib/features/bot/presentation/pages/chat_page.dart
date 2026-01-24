@@ -1,15 +1,26 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter_markdown/flutter_markdown.dart';
+import 'package:image_picker/image_picker.dart';
+import 'dart:io';
 import 'package:bytequeens_adm/config/theme.dart';
 import 'package:bytequeens_adm/config/app_constants.dart';
 import 'package:bytequeens_adm/features/bot/presentation/widgets/chat_input_section.dart';
+import 'package:bytequeens_adm/features/bot/presentation/widgets/chat_image_widget.dart';
 import 'package:bytequeens_adm/features/bot/presentation/widgets/prompt_suggestion_overlay.dart';
 import 'package:bytequeens_adm/features/bot/presentation/pages/chat_history_page.dart';
 import 'package:bytequeens_adm/data/models/bot.dart';
 import 'package:bytequeens_adm/services/bot_service.dart';
 import 'package:bytequeens_adm/services/auth_service.dart';
+import 'package:bytequeens_adm/services/kb_chat_service.dart';
+import 'package:bytequeens_adm/services/image_cache_service.dart';
+import 'package:bytequeens_adm/services/file_upload_service.dart';
+import 'package:bytequeens_adm/services/subscription_service.dart';
+import 'package:bytequeens_adm/services/ad_service.dart';
+import 'package:bytequeens_adm/services/calendar_agent_service.dart';
 import 'package:bytequeens_adm/data/repositories/ai_chat_repository.dart';
 import 'package:bytequeens_adm/data/models/ai_chat_models.dart';
+import 'package:bytequeens_adm/data/models/subscription_models.dart';
 
 class ChatMessage {
   final String content;
@@ -19,6 +30,9 @@ class ChatMessage {
   final String? modelId;
   final String? messageId;
   final List<String> files;
+  final String? localImagePath; // Local cached image path
+  final bool
+  imageExpired; // Flag to indicate if image is no longer available from API
 
   ChatMessage({
     required this.content,
@@ -28,6 +42,8 @@ class ChatMessage {
     this.modelId,
     this.messageId,
     this.files = const [],
+    this.localImagePath,
+    this.imageExpired = false,
   });
 }
 
@@ -37,25 +53,30 @@ class ChatPage extends StatefulWidget {
   final String modelName;
   final List<Map<String, dynamic>>? existingMessages;
   final String? chatId;
+  final bool shouldPickImage; // Auto-trigger image picker
+  final bool shouldOpenCamera; // Auto-trigger camera
 
   const ChatPage({
-    Key? key,
-    required this.initialMessage,
+    super.key,
+    this.initialMessage = '',
     required this.modelId,
     required this.modelName,
     this.existingMessages,
     this.chatId,
-  }) : super(key: key);
+    this.shouldPickImage = false,
+    this.shouldOpenCamera = false,
+  });
 
   // Named constructor for loading chat history
   const ChatPage.withHistory({
-    Key? key,
+    super.key,
     required this.chatId,
     required this.existingMessages,
     required this.modelName,
+    required this.modelId,
   }) : initialMessage = '',
-       modelId = 'gpt-4o-mini',
-       super(key: key);
+       shouldPickImage = false,
+       shouldOpenCamera = false;
 
   @override
   State<ChatPage> createState() => _ChatPageState();
@@ -66,6 +87,12 @@ class _ChatPageState extends State<ChatPage> {
   final _botService = BotService();
   final _authService = AuthService();
   final _aiChatRepo = AiChatRepository();
+  final _kbChatService = KBChatService();
+  final _imageCacheService = ImageCacheService();
+  final _fileUploadService = FileUploadService();
+  final _subscriptionService = SubscriptionService();
+  final _calendarAgent = CalendarAgentService();
+  final _imagePicker = ImagePicker();
   final ScrollController _scrollController = ScrollController();
 
   List<ChatMessage> _messages = [];
@@ -74,7 +101,12 @@ class _ChatPageState extends State<ChatPage> {
   String _selectedModelId = '';
   String? _conversationId;
   int _remainingUsage = 0;
+  TokenUsage? _tokenUsage;
   bool _isLoading = false;
+  bool _useKBChat = false; // Toggle to use KB chat for custom bots
+  String? _pendingImagePath; // Temporary storage for image before sending
+  XFile? _pendingXFile; // XFile object for web upload
+  int _messagesSinceLastAd = 0; // Counter for ad frequency
 
   @override
   void initState() {
@@ -82,52 +114,57 @@ class _ChatPageState extends State<ChatPage> {
     _selectedModel = widget.modelName;
     _selectedModelId = widget.modelId;
 
+    print('🔵 ChatPage initState:');
+    print('   modelName: ${widget.modelName}');
+    print('   modelId: ${widget.modelId}');
+    print('   initialMessage: ${widget.initialMessage}');
+    print('   chatId: ${widget.chatId}');
+    print('   existingMessages count: ${widget.existingMessages?.length ?? 0}');
+    print('   shouldPickImage: ${widget.shouldPickImage}');
+    print('   shouldOpenCamera: ${widget.shouldOpenCamera}');
+
     // Load messages IMMEDIATELY if provided
     if (widget.existingMessages != null &&
         widget.existingMessages!.isNotEmpty) {
-      _messages = widget.existingMessages!
-          .map(
-            (msg) => ChatMessage(
-              content: msg['content'] as String,
-              isUser: msg['isUser'] as bool,
-              timestamp: msg['timestamp'] as DateTime,
-              modelName: msg['modelName'] as String?,
-              modelId: msg['modelId'] as String?,
-              messageId: msg['messageId'] as String?,
-              files:
-                  (msg['files'] as List<dynamic>?)
-                      ?.map((e) => e as String)
-                      .toList() ??
-                  [],
-            ),
-          )
-          .toList();
+      _loadMessagesWithImageCache();
       _conversationId = widget.chatId;
 
       // Scroll to bottom after loading history
       WidgetsBinding.instance.addPostFrameCallback((_) {
         _scrollToBottom();
       });
-    } else if (widget.initialMessage.isNotEmpty) {
-      // Add initial message IMMEDIATELY
-      _messages.add(
-        ChatMessage(
-          content: widget.initialMessage,
-          isUser: true,
-          timestamp: DateTime.now(),
-          modelId: _selectedModelId,
-          messageId: 'm${DateTime.now().millisecondsSinceEpoch}',
-        ),
-      );
-
-      // Set loading state to trigger rebuild and show the message
-      _isLoading = true;
     }
 
     // Then do async init
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _checkAuthAndInit();
+
+      // Auto-trigger image picker if requested
+      if (widget.shouldPickImage) {
+        _handleImageUpload();
+      }
+
+      // Auto-trigger camera if requested
+      if (widget.shouldOpenCamera) {
+        _handleCameraCapture();
+      }
+
+      // Load token usage
+      _loadTokenUsage();
     });
+  }
+
+  Future<void> _loadTokenUsage() async {
+    try {
+      final tokenUsage = await _subscriptionService.getTokenUsage();
+      if (mounted) {
+        setState(() {
+          _tokenUsage = tokenUsage;
+        });
+      }
+    } catch (e) {
+      // Silently fail, token usage is optional
+    }
   }
 
   Future<void> _checkAuthAndInit() async {
@@ -153,6 +190,21 @@ class _ChatPageState extends State<ChatPage> {
     // Load user bots
     await _loadUserBots();
 
+    // After loading bots, check if selected model is a custom bot
+    if (mounted) {
+      setState(() {
+        final isCustomBot = _userBots.any((bot) => bot.id == _selectedModelId);
+        _useKBChat = isCustomBot;
+
+        print('🔍 After loading bots check:');
+        print('   _selectedModelId: $_selectedModelId');
+        print('   _userBots count: ${_userBots.length}');
+        print('   Bot IDs: ${_userBots.map((b) => b.id).toList()}');
+        print('   isCustomBot: $isCustomBot');
+        print('   _useKBChat: $_useKBChat');
+      });
+    }
+
     // If initial message exists, send it to AI
     if (widget.initialMessage.isNotEmpty) {
       await _sendMessage(widget.initialMessage);
@@ -168,13 +220,149 @@ class _ChatPageState extends State<ChatPage> {
 
   Future<void> _loadUserBots() async {
     try {
+      print('🤖 Loading user bots...');
       final bots = await _botService.getAllBots();
+      print('✅ Loaded ${bots.length} bots');
+      for (var bot in bots) {
+        print('   - Bot ID: ${bot.id}, Name: ${bot.name}');
+      }
       setState(() {
         _userBots = bots;
       });
     } catch (e) {
-      // Handle error
+      print('❌ Error loading bots: $e');
     }
+  }
+
+  /// Load messages and try to retrieve cached images
+  Future<void> _loadMessagesWithImageCache() async {
+    final loadedMessages = <ChatMessage>[];
+
+    for (final msg in widget.existingMessages!) {
+      final messageId = msg['messageId'] as String?;
+      String? localImagePath;
+      bool imageExpired = false;
+
+      // Try to load cached image if message has one
+      if (messageId != null) {
+        localImagePath = await _imageCacheService.getCachedImagePath(messageId);
+
+        // If no cached image but message had files, mark as expired
+        final files =
+            (msg['files'] as List<dynamic>?)
+                ?.map((e) => e as String)
+                .toList() ??
+            [];
+
+        if (files.isNotEmpty && localImagePath == null) {
+          imageExpired = true;
+        }
+      }
+
+      loadedMessages.add(
+        ChatMessage(
+          content: msg['content'] as String,
+          isUser: msg['isUser'] as bool,
+          timestamp: msg['timestamp'] as DateTime,
+          modelName: msg['modelName'] as String?,
+          modelId: msg['modelId'] as String?,
+          messageId: messageId,
+          files:
+              (msg['files'] as List<dynamic>?)
+                  ?.map((e) => e as String)
+                  .toList() ??
+              [],
+          localImagePath: localImagePath,
+          imageExpired: imageExpired,
+        ),
+      );
+    }
+
+    setState(() {
+      _messages = loadedMessages;
+    });
+  }
+
+  /// Handle image upload from gallery
+  Future<void> _handleImageUpload() async {
+    try {
+      final XFile? image = await _imagePicker.pickImage(
+        source: ImageSource.gallery,
+        imageQuality: 80,
+      );
+
+      if (image != null) {
+        setState(() {
+          _pendingImagePath = image.path;
+          _pendingXFile = image; // Store XFile for web upload
+        });
+
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: const Text('Image selected. Type a message and send.'),
+              backgroundColor: AppTheme.primaryBlue,
+              duration: const Duration(seconds: 2),
+            ),
+          );
+        }
+      }
+    } catch (e) {
+      print('❌ Error picking image: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to pick image: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+
+  /// Handle camera capture
+  Future<void> _handleCameraCapture() async {
+    try {
+      final XFile? image = await _imagePicker.pickImage(
+        source: ImageSource.camera,
+        imageQuality: 80,
+      );
+
+      if (image != null) {
+        setState(() {
+          _pendingImagePath = image.path;
+          _pendingXFile = image; // Store XFile for web upload
+        });
+
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: const Text('Photo captured. Type a message and send.'),
+              backgroundColor: AppTheme.primaryBlue,
+              duration: const Duration(seconds: 2),
+            ),
+          );
+        }
+      }
+    } catch (e) {
+      print('❌ Error capturing image: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to capture photo: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+
+  /// Clear pending image
+  void _clearPendingImage() {
+    setState(() {
+      _pendingImagePath = null;
+      _pendingXFile = null;
+    });
   }
 
   void _handleModelChange(String modelId, String modelName) {
@@ -182,11 +370,17 @@ class _ChatPageState extends State<ChatPage> {
       _selectedModelId = modelId;
       _selectedModel = modelName;
 
+      // Check if this is a custom bot (KB bot)
+      final isCustomBot = _userBots.any((bot) => bot.id == modelId);
+      _useKBChat = isCustomBot;
+
       // Giữ nguyên conversation - cho phép nhiều model trong 1 đoạn chat
       // Show info message to user
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Switched to $modelName'),
+          content: Text(
+            'Switched to $modelName${isCustomBot ? ' (Custom Bot)' : ''}',
+          ),
           backgroundColor: AppTheme.primaryBlue,
           duration: const Duration(seconds: 1),
         ),
@@ -195,23 +389,173 @@ class _ChatPageState extends State<ChatPage> {
   }
 
   Future<void> _sendMessage(String message) async {
-    if (message.trim().isEmpty) return;
+    if (message.trim().isEmpty && _pendingImagePath == null) return;
+
+    // Cache the pending image path before clearing it
+    final imagePath = _pendingImagePath;
+    final messageId = 'm${DateTime.now().millisecondsSinceEpoch}';
+    String? cachedImagePath;
+
+    // Cache image if present
+    if (imagePath != null) {
+      cachedImagePath = await _imageCacheService.cacheImage(
+        imagePath,
+        messageId,
+      );
+    }
+
+    // Add user message to UI immediately
+    if (mounted) {
+      setState(() {
+        _messages.add(
+          ChatMessage(
+            content: message.trim(),
+            isUser: true,
+            timestamp: DateTime.now(),
+            messageId: messageId,
+            localImagePath: cachedImagePath,
+            imageExpired: false,
+          ),
+        );
+        _pendingImagePath = null; // Clear pending image
+        _pendingXFile = null; // Clear XFile reference
+      });
+      _messageController.clear();
+      _scrollToBottom();
+    }
 
     setState(() {
       _isLoading = true;
     });
 
+    print('📤 _sendMessage Debug:');
+    print('   _useKBChat: $_useKBChat');
+    print('   _selectedModelId: $_selectedModelId');
+    print('   Has image: ${imagePath != null}');
+
+    // 🤖 AI Agent: Xử lý Calendar Intent trước khi gửi đến AI Chat
+    if (imagePath == null) { // Chỉ detect intent khi không có image
+      final agentResponse = await _calendarAgent.processMessage(message);
+
+      if (agentResponse.shouldShowAgentResponse) {
+        // Agent đã xử lý thành công, hiển thị kết quả
+        print('   ✅ Agent handled calendar creation');
+        if (mounted) {
+          setState(() {
+            _messages.add(
+              ChatMessage(
+                content: agentResponse.successMessage!,
+                isUser: false,
+                timestamp: DateTime.now(),
+                modelName: _selectedModel,
+                modelId: _selectedModelId,
+                messageId: 'm${DateTime.now().millisecondsSinceEpoch}',
+              ),
+            );
+            _isLoading = false;
+          });
+          _scrollToBottom();
+        }
+        return; // Không cần gửi đến AI Chat nữa
+      } else if (agentResponse.hasError) {
+        // Có lỗi khi tạo calendar event
+        print('   ❌ Agent error: ${agentResponse.errorMessage}');
+        if (mounted) {
+          setState(() {
+            _messages.add(
+              ChatMessage(
+                content: agentResponse.errorMessage!,
+                isUser: false,
+                timestamp: DateTime.now(),
+                modelName: _selectedModel,
+                modelId: _selectedModelId,
+                messageId: 'm${DateTime.now().millisecondsSinceEpoch}',
+              ),
+            );
+            _isLoading = false;
+          });
+          _scrollToBottom();
+        }
+        return; // Không cần gửi đến AI Chat nữa
+      }
+      // Nếu không có intent hoặc intent không đủ thông tin, tiếp tục flow bình thường
+      print('   ℹ️ No calendar intent or incomplete info, proceed to AI chat');
+    }
+
     try {
-      // Create assistant from selected model
+      // Check if using custom KB bot
+      if (_useKBChat) {
+        print('   ✅ Using KB Chat for custom bot');
+        final bot = _userBots.firstWhere(
+          (b) => b.id == _selectedModelId,
+          orElse: () => _userBots.first,
+        );
+
+        // Use KB Chat Service
+        final response = await _kbChatService.productionChat(
+          bot: bot,
+          message: message,
+        );
+
+        if (mounted) {
+          setState(() {
+            _messages.add(
+              ChatMessage(
+                content: response.message,
+                isUser: false,
+                timestamp: DateTime.now(),
+                modelName: _selectedModel,
+                modelId: _selectedModelId,
+                messageId: 'm${DateTime.now().millisecondsSinceEpoch}',
+              ),
+            );
+            _remainingUsage = response.remainingUsage ?? _remainingUsage;
+            _isLoading = false;
+          });
+
+          print('   ✅ KB Chat response added to UI');
+          _scrollToBottom();
+        }
+        return;
+      }
+
+      // Use default AI Chat for built-in models
+      print('   ⚠️ Using AI Chat for base model');
       final assistant = _getAssistantFromModelId(_selectedModelId);
+
+      // Upload image if present
+      List<String> fileUrls = [];
+      if (imagePath != null) {
+        try {
+          print('📤 Uploading image...');
+          final fileUrl = await _fileUploadService.uploadImage(
+            imagePath,
+            xFile: _pendingXFile, // Pass XFile for web support
+          );
+          fileUrls.add(fileUrl);
+          print('✅ Image uploaded: $fileUrl');
+        } catch (e) {
+          print('❌ Image upload failed: $e');
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text('Image upload failed. Sending text only.'),
+                backgroundColor: Colors.orange,
+              ),
+            );
+          }
+          // Continue without image
+        }
+      }
 
       MessageResponse response;
 
       if (_conversationId == null) {
-        // Create new thread
+        // Create new thread with files
         response = await _aiChatRepo.createNewThread(
           content: message,
           assistant: assistant,
+          files: fileUrls.isNotEmpty ? fileUrls : null,
         );
         _conversationId = response.conversationId;
       } else {
@@ -237,13 +581,14 @@ class _ChatPageState extends State<ChatPage> {
           '   Last message role: ${conversationHistory.isNotEmpty ? conversationHistory.last['role'] : 'none'}',
         );
 
-        // Send message in existing conversation with full history
+        // Send message in existing conversation with full history and files
         response = await _aiChatRepo.sendMessage(
           content: message,
           assistant: assistant,
           conversationHistory: conversationHistory,
           conversationId:
               _conversationId, // Pass conversation ID to maintain context
+          files: fileUrls.isNotEmpty ? fileUrls : null,
         );
 
         // Update conversationId if it changed (should stay the same for existing conversation)
@@ -394,16 +739,27 @@ class _ChatPageState extends State<ChatPage> {
     final message = _messageController.text.trim();
     if (message.isEmpty) return;
 
+    // Show interstitial ad every 5 messages for Free users
+    _messagesSinceLastAd++;
+    if (_tokenUsage?.isPro != true && _messagesSinceLastAd >= 5) {
+      AdService().showInterstitialAd();
+      _messagesSinceLastAd = 0;
+    }
+
+    // Re-check if current model is a custom bot before sending
+    final isCustomBot = _userBots.any((bot) => bot.id == _selectedModelId);
+
+    print('🔍 _handleSendMessage Debug:');
+    print('   Selected Model ID: $_selectedModelId');
+    print('   Selected Model Name: $_selectedModel');
+    print('   Is Custom Bot: $isCustomBot');
+    print('   User Bots Count: ${_userBots.length}');
+    if (_userBots.isNotEmpty) {
+      print('   User Bot IDs: ${_userBots.map((b) => b.id).join(', ')}');
+    }
+
     setState(() {
-      _messages.add(
-        ChatMessage(
-          content: message,
-          isUser: true,
-          timestamp: DateTime.now(),
-          modelId: _selectedModelId,
-          messageId: 'm${DateTime.now().millisecondsSinceEpoch}',
-        ),
-      );
+      _useKBChat = isCustomBot;
     });
 
     _messageController.clear();
@@ -505,37 +861,165 @@ class _ChatPageState extends State<ChatPage> {
           Center(
             child: Container(
               constraints: const BoxConstraints(maxWidth: 1200),
-              child: PromptSuggestionOverlay(
-                messageController: _messageController,
-                child: ChatInputSection(
-                  messageController: _messageController,
-                  selectedModel: _selectedModel,
-                  freeMessagesRemaining: _remainingUsage,
-                  userBots: _userBots,
-                  onModelChanged: _handleModelChange,
-                  onSendMessage: _handleSendMessage,
-                  onCreateBot: () {
-                    // Navigate to create bot
-                  },
-                  onHistoryTap: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => ChatHistoryPage(
-                          currentConversationId: _conversationId,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  // Pending image preview
+                  if (_pendingImagePath != null) ...[
+                    // Info message about temporary images
+                    Container(
+                      margin: const EdgeInsets.fromLTRB(16, 8, 16, 4),
+                      padding: const EdgeInsets.all(10),
+                      decoration: BoxDecoration(
+                        color: Colors.blue.withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(color: Colors.blue.withOpacity(0.3)),
+                      ),
+                      child: Row(
+                        children: [
+                          Icon(
+                            Icons.info_outline,
+                            size: 16,
+                            color: Colors.blue,
+                          ),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              'Images are cached locally and viewable once. They won\'t appear in future chat history.',
+                              style: TextStyle(
+                                fontSize: 11,
+                                color: isDark
+                                    ? Colors.blue[200]
+                                    : Colors.blue[700],
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    // Image preview
+                    Container(
+                      margin: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 4,
+                      ),
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: isDark ? AppTheme.navyBlue : Colors.grey[100],
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(
+                          color: AppTheme.primaryBlue.withOpacity(0.3),
+                          width: 2,
                         ),
                       ),
-                    );
-                  },
-                  onNewChat: () {
-                    // Clear current chat and start new one
-                    setState(() {
-                      _messages.clear();
-                      _messageController.clear();
-                      _conversationId = null;
-                    });
-                  },
-                ),
+                      child: Row(
+                        children: [
+                          // Image thumbnail
+                          ClipRRect(
+                            borderRadius: BorderRadius.circular(8),
+                            child: kIsWeb
+                                ? Image.network(
+                                    _pendingImagePath!,
+                                    width: 60,
+                                    height: 60,
+                                    fit: BoxFit.cover,
+                                    errorBuilder: (context, error, stackTrace) {
+                                      return Container(
+                                        width: 60,
+                                        height: 60,
+                                        color: Colors.grey,
+                                        child: const Icon(Icons.image),
+                                      );
+                                    },
+                                  )
+                                : Image.file(
+                                    File(_pendingImagePath!),
+                                    width: 60,
+                                    height: 60,
+                                    fit: BoxFit.cover,
+                                  ),
+                          ),
+                          const SizedBox(width: 12),
+                          // Info text
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'Image ready to send',
+                                  style: TextStyle(
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.w600,
+                                    color: isDark
+                                        ? Colors.white
+                                        : Colors.black87,
+                                  ),
+                                ),
+                                const SizedBox(height: 4),
+                                Text(
+                                  'Type a message and click send',
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    color: isDark
+                                        ? Colors.grey[400]
+                                        : Colors.grey[600],
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          // Remove button
+                          IconButton(
+                            icon: Icon(Icons.close, color: Colors.red[400]),
+                            onPressed: _clearPendingImage,
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+
+                  PromptSuggestionOverlay(
+                    messageController: _messageController,
+                    child: ChatInputSection(
+                      messageController: _messageController,
+                      selectedModel: _selectedModel,
+                      tokenUsage: _tokenUsage ??
+                          TokenUsage(
+                            availableTokens: _remainingUsage,
+                            totalTokens: _remainingUsage,
+                            unlimited: false,
+                            date: DateTime.now(),
+                          ),
+                      userBots: _userBots,
+                      onModelChanged: _handleModelChange,
+                      onSendMessage: _handleSendMessage,
+                      onImageUpload: _handleImageUpload,
+                      onCameraCapture: _handleCameraCapture,
+                      onCreateBot: () {
+                        // Navigate to create bot
+                      },
+                      onHistoryTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => ChatHistoryPage(
+                              currentConversationId: _conversationId,
+                            ),
+                          ),
+                        );
+                      },
+                      onNewChat: () {
+                        // Clear current chat and start new one
+                        setState(() {
+                          _messages.clear();
+                          _messageController.clear();
+                          _conversationId = null;
+                          _pendingImagePath = null;
+                        });
+                      },
+                    ),
+                  ),
+                ],
               ),
             ),
           ),
@@ -725,6 +1209,18 @@ class _ChatPageState extends State<ChatPage> {
                   ],
                 ),
                 const SizedBox(height: 8),
+
+                // Display image if present
+                if (message.localImagePath != null) ...[
+                  ChatImageWidget(
+                    localImagePath: message.localImagePath,
+                    imageExpired: message.imageExpired,
+                    isUserMessage: message.isUser,
+                  ),
+                  const SizedBox(height: 8),
+                ],
+
+                // Display message content
                 message.isUser
                     ? Text(
                         message.content,

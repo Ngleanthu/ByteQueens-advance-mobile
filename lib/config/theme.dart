@@ -8,14 +8,19 @@ class AppTheme {
   static const Color mediumBlue = Color(0xFF2E4057);
   static const Color lightText = Color(0xFFE0E1DD);
   static const Color whiteText = Colors.white;
-  
+
   // Light mode colors
   static const Color lightBackground = Color(0xFFF5F5F5);
   static const Color lightInputBg = Color(0xFFF5F5F5);
   static const Color lightInputBorder = Color(0xFFE0E0E0);
   static const Color lightIconColor = Color(0xFF6B7280);
   static const Color lightTextColor = Color(0xFF1F2937);
-  
+
+  // Dark mode colors
+  static const Color darkBackground = Color(0xFF0D1B2A);
+  static const Color darkSurface = Color(0xFF1B263B);
+  static const Color darkCard = Color(0xFF2E4057);
+
   // Gradient cho background
   static const LinearGradient backgroundGradient = LinearGradient(
     begin: Alignment.topLeft,
@@ -28,7 +33,7 @@ class AppTheme {
     ],
     stops: [0.0, 0.3, 0.7, 1.0],
   );
-  
+
   // Theme chính
   static ThemeData get darkTheme {
     return ThemeData(
@@ -36,13 +41,13 @@ class AppTheme {
       brightness: Brightness.dark,
       primaryColor: primaryBlue,
       scaffoldBackgroundColor: darkBlue,
-      
+
       colorScheme: const ColorScheme.dark(
         primary: primaryBlue,
         secondary: navyBlue,
         surface: navyBlue,
       ),
-      
+
       // AppBar Theme
       appBarTheme: const AppBarTheme(
         backgroundColor: Colors.transparent,
@@ -54,7 +59,7 @@ class AppTheme {
           fontWeight: FontWeight.w500,
         ),
       ),
-      
+
       // Text Theme
       textTheme: const TextTheme(
         displayLarge: TextStyle(
@@ -77,16 +82,10 @@ class AppTheme {
           fontWeight: FontWeight.w600,
           color: whiteText,
         ),
-        bodyLarge: TextStyle(
-          fontSize: 16,
-          color: lightText,
-        ),
-        bodyMedium: TextStyle(
-          fontSize: 14,
-          color: lightText,
-        ),
+        bodyLarge: TextStyle(fontSize: 16, color: lightText),
+        bodyMedium: TextStyle(fontSize: 14, color: lightText),
       ),
-      
+
       // Input Decoration Theme
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
@@ -106,7 +105,7 @@ class AppTheme {
         labelStyle: const TextStyle(color: lightText),
         hintStyle: TextStyle(color: lightText.withValues(alpha: 0.5)),
       ),
-      
+
       // Elevated Button Theme
       elevatedButtonTheme: ElevatedButtonThemeData(
         style: ElevatedButton.styleFrom(
@@ -120,15 +119,12 @@ class AppTheme {
           elevation: 0,
         ),
       ),
-      
+
       // Text Button Theme
       textButtonTheme: TextButtonThemeData(
         style: TextButton.styleFrom(
           foregroundColor: primaryBlue,
-          textStyle: const TextStyle(
-            fontSize: 14,
-            fontWeight: FontWeight.w500,
-          ),
+          textStyle: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
         ),
       ),
     );
