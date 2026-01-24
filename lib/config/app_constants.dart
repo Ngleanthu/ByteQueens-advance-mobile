@@ -73,6 +73,10 @@ class AppConstants {
 
   //Routes - Create Email
   static const String createEmailRoute = '/emails';
+  
+  // Routes - Subscription
+  static const String pricingRoute = '/pricing';
+  
   // Messages - Auth
   static const String loginPrompt = 'Log in to get 50 free Credits every day';
   static const String loginWithEmail = 'Log in with Email';
@@ -406,6 +410,19 @@ class AppConstants {
   static const String fileTooLarge = "File is too large. Maximum size is 50MB";
   static const String driveUploadSupportedFormats =
       "Supported: PDF, Images, Documents";
+
+  // Subscription & Pricing
+  static const String tokensRemaining = "tokens remaining";
+  static const String unlimitedTokens = "Unlimited";
+  static const String upgradeForMore = "Upgrade for more";
+  static const String pricingTitle = "Choose Your Plan";
+  static const String currentPlan = "Current Plan";
+  static const String freePlan = "Free";
+  static const String proPlan = "Pro";
+  static const String monthlyBilling = "Monthly";
+  static const String yearlyBilling = "Yearly";
+  static const String subscribe = "Subscribe";
+  static const String saveMoney = "Save 20%";
 
   // Mock Data (for demo)
   static const String mockEmail = 'test@jarvis.com';

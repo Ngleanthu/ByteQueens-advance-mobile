@@ -8,6 +8,9 @@ import 'package:bytequeens_adm/services/prompt_service.dart';
 import 'package:bytequeens_adm/services/waitlist_service.dart';
 import 'package:bytequeens_adm/services/calendar_booking_service.dart';
 import 'package:bytequeens_adm/services/google_drive_upload_service.dart';
+import 'package:bytequeens_adm/services/subscription_service.dart';
+import 'package:bytequeens_adm/services/ad_service.dart';
+import 'package:bytequeens_adm/data/models/subscription_models.dart';
 import 'package:bytequeens_adm/data/models/bot.dart';
 import 'package:bytequeens_adm/data/models/prompt.dart';
 import 'package:bytequeens_adm/app.dart';
@@ -33,18 +36,23 @@ class _HomePageState extends State<HomePage> {
   final _waitlistService = WaitlistService();
   final _calendarService = CalendarBookingService();
   final _driveUploadService = GoogleDriveUploadService();
+  final _subscriptionService = SubscriptionService();
   String _selectedModel = 'GPT-4o Mini';
   String _selectedModelId = 'gpt-4o-mini';
   List<Bot> _userBots = [];
   List<Prompt> _suggestedPrompts = [];
   bool _isMenuExpanded = true;
   bool _isLoadingPrompts = true;
+  TokenUsage? _tokenUsage;
+  SubscriptionPlan? _subscriptionPlan;
+  bool _isLoadingSubscription = true;
 
   @override
   void initState() {
     super.initState();
     _loadUserBots();
     _loadSuggestedPrompts();
+    _loadSubscriptionInfo();
   }
 
   Future<void> _loadUserBots() async {
@@ -74,6 +82,27 @@ class _HomePageState extends State<HomePage> {
         _isLoadingPrompts = false;
       });
       // Handle error silently
+    }
+  }
+
+  Future<void> _loadSubscriptionInfo() async {
+    try {
+      final tokenUsage = await _subscriptionService.getTokenUsage();
+      final plan = await _subscriptionService.getSubscriptionPlan();
+
+      if (mounted) {
+        setState(() {
+          _tokenUsage = tokenUsage;
+          _subscriptionPlan = plan;
+          _isLoadingSubscription = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _isLoadingSubscription = false;
+        });
+      }
     }
   }
 
@@ -589,16 +618,47 @@ class _HomePageState extends State<HomePage> {
                                     ),
                                     const SizedBox(height: 32),
 
-                                    Container(
-                                      padding: const EdgeInsets.all(24),
-                                      decoration: BoxDecoration(
-                                        color: isDark
-                                            ? AppTheme.navyBlue
-                                            : Colors.grey[100],
-                                        borderRadius: BorderRadius.circular(16),
-                                      ),
-                                      child: Column(
+                                    // Upgrade to Pro Section - Only show for Free users
+                                    if (_tokenUsage?.isPro != true)
+                                      Container(
+                                        padding: const EdgeInsets.all(24),
+                                        decoration: BoxDecoration(
+                                          gradient: LinearGradient(
+                                            colors: [
+                                              AppTheme.primaryBlue.withOpacity(0.1),
+                                              AppTheme.primaryBlue.withOpacity(0.05),
+                                            ],
+                                            begin: Alignment.topLeft,
+                                            end: Alignment.bottomRight,
+                                          ),
+                                          borderRadius: BorderRadius.circular(16),
+                                          border: Border.all(
+                                            color: AppTheme.primaryBlue.withOpacity(0.3),
+                                            width: 1.5,
+                                          ),
+                                        ),
+                                        child: Column(
                                         children: [
+                                          Row(
+                                            mainAxisAlignment: MainAxisAlignment.center,
+                                            children: [
+                                              Icon(
+                                                Icons.workspace_premium,
+                                                color: AppTheme.primaryBlue,
+                                                size: 28,
+                                              ),
+                                              const SizedBox(width: 12),
+                                              Text(
+                                                'Jarvis Pro',
+                                                style: TextStyle(
+                                                  fontSize: 24,
+                                                  fontWeight: FontWeight.bold,
+                                                  color: AppTheme.primaryBlue,
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                          const SizedBox(height: 16),
                                           Text(
                                             AppConstants.upgradePro,
                                             textAlign: TextAlign.center,
@@ -608,96 +668,93 @@ class _HomePageState extends State<HomePage> {
                                               color: isDark
                                                   ? Colors.white
                                                   : AppTheme.darkBlue,
-                                            ),
-                                          ),
-                                          const SizedBox(height: 12),
-                                          RichText(
-                                            text: TextSpan(
-                                              text:
-                                                  '${AppConstants.orInviteFriends} ',
-                                              style: TextStyle(
-                                                fontSize: 14,
-                                                color: isDark
-                                                    ? Colors.grey[400]
-                                                    : Colors.grey[600],
-                                              ),
-                                              children: [
-                                                TextSpan(
-                                                  text:
-                                                      AppConstants.freePremium,
-                                                  style: TextStyle(
-                                                    color: AppTheme.primaryBlue,
-                                                    fontWeight: FontWeight.w600,
-                                                  ),
-                                                ),
-                                                TextSpan(text: '.'),
-                                              ],
+                                              height: 1.4,
                                             ),
                                           ),
                                           const SizedBox(height: 20),
-                                          Row(
-                                            children: [
-                                              Expanded(
-                                                child: ElevatedButton(
-                                                  onPressed: () {},
-                                                  style: ElevatedButton.styleFrom(
-                                                    backgroundColor:
-                                                        AppTheme.primaryBlue,
-                                                    padding:
-                                                        const EdgeInsets.symmetric(
-                                                          vertical: 14,
-                                                        ),
-                                                    shape: RoundedRectangleBorder(
-                                                      borderRadius:
-                                                          BorderRadius.circular(
-                                                            12,
-                                                          ),
-                                                    ),
-                                                  ),
-                                                  child: const Text(
-                                                    AppConstants.startFreeTrial,
-                                                    style: TextStyle(
-                                                      fontSize: 14,
-                                                      fontWeight:
-                                                          FontWeight.w600,
-                                                      color: Colors.white,
-                                                    ),
-                                                  ),
+                                          // Pro Benefits
+                                          _buildProBenefit(
+                                            Icons.all_inclusive,
+                                            'Unlimited tokens',
+                                            isDark,
+                                          ),
+                                          const SizedBox(height: 12),
+                                          _buildProBenefit(
+                                            Icons.flash_on,
+                                            'Priority access to new features',
+                                            isDark,
+                                          ),
+                                          const SizedBox(height: 12),
+                                          _buildProBenefit(
+                                            Icons.support_agent,
+                                            'Premium support',
+                                            isDark,
+                                          ),
+                                          const SizedBox(height: 24),
+                                          // Show current plan if loaded
+                                          if (!_isLoadingSubscription && _subscriptionPlan != null)
+                                            Container(
+                                              padding: const EdgeInsets.symmetric(
+                                                horizontal: 16,
+                                                vertical: 8,
+                                              ),
+                                              decoration: BoxDecoration(
+                                                color: _subscriptionPlan!.isPro
+                                                    ? Colors.green.withOpacity(0.1)
+                                                    : Colors.orange.withOpacity(0.1),
+                                                borderRadius: BorderRadius.circular(8),
+                                              ),
+                                              child: Text(
+                                                _subscriptionPlan!.isPro
+                                                    ? '✓ You have Pro Plan'
+                                                    : 'Current: ${_subscriptionPlan!.name} Plan',
+                                                style: TextStyle(
+                                                  fontSize: 14,
+                                                  fontWeight: FontWeight.w600,
+                                                  color: _subscriptionPlan!.isPro
+                                                      ? Colors.green[700]
+                                                      : Colors.orange[700],
                                                 ),
                                               ),
-                                              const SizedBox(width: 12),
-                                              Expanded(
-                                                child: OutlinedButton(
-                                                  onPressed: () {},
-                                                  style: OutlinedButton.styleFrom(
-                                                    padding:
-                                                        const EdgeInsets.symmetric(
-                                                          vertical: 14,
-                                                        ),
-                                                    side: BorderSide(
-                                                      color:
-                                                          AppTheme.primaryBlue,
-                                                    ),
-                                                    shape: RoundedRectangleBorder(
-                                                      borderRadius:
-                                                          BorderRadius.circular(
-                                                            12,
-                                                          ),
-                                                    ),
-                                                  ),
-                                                  child: const Text(
-                                                    AppConstants.inviteFriends,
-                                                    style: TextStyle(
-                                                      fontSize: 14,
-                                                      fontWeight:
-                                                          FontWeight.w600,
-                                                      color:
-                                                          AppTheme.primaryBlue,
-                                                    ),
-                                                  ),
+                                            ),
+                                          if (!_isLoadingSubscription && _subscriptionPlan != null)
+                                            const SizedBox(height: 16),
+                                          // Start Free Trial Button
+                                          SizedBox(
+                                            width: double.infinity,
+                                            child: ElevatedButton(
+                                              onPressed: _subscriptionPlan?.isPro == true
+                                                  ? null
+                                                  : () async {
+                                                      // Navigate to pricing page and reload when returned
+                                                      await Navigator.pushNamed(
+                                                        context,
+                                                        AppConstants.pricingRoute,
+                                                      );
+                                                      // Reload subscription info after returning
+                                                      _loadSubscriptionInfo();
+                                                    },
+                                              style: ElevatedButton.styleFrom(
+                                                backgroundColor: AppTheme.primaryBlue,
+                                                padding: const EdgeInsets.symmetric(
+                                                  vertical: 16,
+                                                ),
+                                                shape: RoundedRectangleBorder(
+                                                  borderRadius: BorderRadius.circular(12),
+                                                ),
+                                                elevation: 2,
+                                              ),
+                                              child: Text(
+                                                _subscriptionPlan?.isPro == true
+                                                    ? 'You\'re on Pro ✓'
+                                                    : AppConstants.startFreeTrial,
+                                                style: const TextStyle(
+                                                  fontSize: 16,
+                                                  fontWeight: FontWeight.bold,
+                                                  color: Colors.white,
                                                 ),
                                               ),
-                                            ],
+                                            ),
                                           ),
                                         ],
                                       ),
@@ -1118,13 +1175,24 @@ class _HomePageState extends State<HomePage> {
                               ),
                             ),
 
+                            // Banner Ad for Free users
+                            if (_tokenUsage?.isPro != true)
+                              Padding(
+                                padding: const EdgeInsets.symmetric(vertical: 16),
+                                child: AdBannerWidget(
+                                  onAdLoaded: () => print('✅ Banner ad loaded'),
+                                  onAdFailedToLoad: (error) =>
+                                      print('❌ Banner ad failed: $error'),
+                                ),
+                              ),
+
                             // New Chat Input Section Widget with Prompt Suggestions
                             PromptSuggestionOverlay(
                               messageController: _messageController,
                               child: ChatInputSection(
                                 messageController: _messageController,
                                 selectedModel: _selectedModel,
-                                freeMessagesRemaining: 45,
+                                tokenUsage: _tokenUsage,
                                 userBots: _userBots,
                                 onModelChanged: _handleModelChange,
                                 onSendMessage: () {
@@ -1266,6 +1334,41 @@ class _HomePageState extends State<HomePage> {
           modelName: _selectedModel,
         ),
       ),
+    );
+  }
+
+  Widget _buildProBenefit(IconData icon, String text, bool isDark) {
+    return Row(
+      children: [
+        Container(
+          padding: const EdgeInsets.all(8),
+          decoration: BoxDecoration(
+            color: AppTheme.primaryBlue.withOpacity(0.1),
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: Icon(
+            icon,
+            color: AppTheme.primaryBlue,
+            size: 20,
+          ),
+        ),
+        const SizedBox(width: 12),
+        Expanded(
+          child: Text(
+            text,
+            style: TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.w500,
+              color: isDark ? Colors.white : AppTheme.darkBlue,
+            ),
+          ),
+        ),
+        Icon(
+          Icons.check_circle,
+          color: Colors.green,
+          size: 20,
+        ),
+      ],
     );
   }
 }

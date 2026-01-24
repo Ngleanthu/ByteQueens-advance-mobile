@@ -15,8 +15,12 @@ import 'package:bytequeens_adm/services/auth_service.dart';
 import 'package:bytequeens_adm/services/kb_chat_service.dart';
 import 'package:bytequeens_adm/services/image_cache_service.dart';
 import 'package:bytequeens_adm/services/file_upload_service.dart';
+import 'package:bytequeens_adm/services/subscription_service.dart';
+import 'package:bytequeens_adm/services/ad_service.dart';
+import 'package:bytequeens_adm/services/calendar_agent_service.dart';
 import 'package:bytequeens_adm/data/repositories/ai_chat_repository.dart';
 import 'package:bytequeens_adm/data/models/ai_chat_models.dart';
+import 'package:bytequeens_adm/data/models/subscription_models.dart';
 
 class ChatMessage {
   final String content;
@@ -86,6 +90,8 @@ class _ChatPageState extends State<ChatPage> {
   final _kbChatService = KBChatService();
   final _imageCacheService = ImageCacheService();
   final _fileUploadService = FileUploadService();
+  final _subscriptionService = SubscriptionService();
+  final _calendarAgent = CalendarAgentService();
   final _imagePicker = ImagePicker();
   final ScrollController _scrollController = ScrollController();
 
@@ -95,10 +101,12 @@ class _ChatPageState extends State<ChatPage> {
   String _selectedModelId = '';
   String? _conversationId;
   int _remainingUsage = 0;
+  TokenUsage? _tokenUsage;
   bool _isLoading = false;
   bool _useKBChat = false; // Toggle to use KB chat for custom bots
   String? _pendingImagePath; // Temporary storage for image before sending
   XFile? _pendingXFile; // XFile object for web upload
+  int _messagesSinceLastAd = 0; // Counter for ad frequency
 
   @override
   void initState() {
@@ -140,7 +148,23 @@ class _ChatPageState extends State<ChatPage> {
       if (widget.shouldOpenCamera) {
         _handleCameraCapture();
       }
+
+      // Load token usage
+      _loadTokenUsage();
     });
+  }
+
+  Future<void> _loadTokenUsage() async {
+    try {
+      final tokenUsage = await _subscriptionService.getTokenUsage();
+      if (mounted) {
+        setState(() {
+          _tokenUsage = tokenUsage;
+        });
+      }
+    } catch (e) {
+      // Silently fail, token usage is optional
+    }
   }
 
   Future<void> _checkAuthAndInit() async {
@@ -409,6 +433,55 @@ class _ChatPageState extends State<ChatPage> {
     print('   _selectedModelId: $_selectedModelId');
     print('   Has image: ${imagePath != null}');
 
+    // 🤖 AI Agent: Xử lý Calendar Intent trước khi gửi đến AI Chat
+    if (imagePath == null) { // Chỉ detect intent khi không có image
+      final agentResponse = await _calendarAgent.processMessage(message);
+
+      if (agentResponse.shouldShowAgentResponse) {
+        // Agent đã xử lý thành công, hiển thị kết quả
+        print('   ✅ Agent handled calendar creation');
+        if (mounted) {
+          setState(() {
+            _messages.add(
+              ChatMessage(
+                content: agentResponse.successMessage!,
+                isUser: false,
+                timestamp: DateTime.now(),
+                modelName: _selectedModel,
+                modelId: _selectedModelId,
+                messageId: 'm${DateTime.now().millisecondsSinceEpoch}',
+              ),
+            );
+            _isLoading = false;
+          });
+          _scrollToBottom();
+        }
+        return; // Không cần gửi đến AI Chat nữa
+      } else if (agentResponse.hasError) {
+        // Có lỗi khi tạo calendar event
+        print('   ❌ Agent error: ${agentResponse.errorMessage}');
+        if (mounted) {
+          setState(() {
+            _messages.add(
+              ChatMessage(
+                content: agentResponse.errorMessage!,
+                isUser: false,
+                timestamp: DateTime.now(),
+                modelName: _selectedModel,
+                modelId: _selectedModelId,
+                messageId: 'm${DateTime.now().millisecondsSinceEpoch}',
+              ),
+            );
+            _isLoading = false;
+          });
+          _scrollToBottom();
+        }
+        return; // Không cần gửi đến AI Chat nữa
+      }
+      // Nếu không có intent hoặc intent không đủ thông tin, tiếp tục flow bình thường
+      print('   ℹ️ No calendar intent or incomplete info, proceed to AI chat');
+    }
+
     try {
       // Check if using custom KB bot
       if (_useKBChat) {
@@ -666,6 +739,13 @@ class _ChatPageState extends State<ChatPage> {
     final message = _messageController.text.trim();
     if (message.isEmpty) return;
 
+    // Show interstitial ad every 5 messages for Free users
+    _messagesSinceLastAd++;
+    if (_tokenUsage?.isPro != true && _messagesSinceLastAd >= 5) {
+      AdService().showInterstitialAd();
+      _messagesSinceLastAd = 0;
+    }
+
     // Re-check if current model is a custom bot before sending
     final isCustomBot = _userBots.any((bot) => bot.id == _selectedModelId);
 
@@ -917,7 +997,13 @@ class _ChatPageState extends State<ChatPage> {
                     child: ChatInputSection(
                       messageController: _messageController,
                       selectedModel: _selectedModel,
-                      freeMessagesRemaining: _remainingUsage,
+                      tokenUsage: _tokenUsage ??
+                          TokenUsage(
+                            availableTokens: _remainingUsage,
+                            totalTokens: _remainingUsage,
+                            unlimited: false,
+                            date: DateTime.now(),
+                          ),
                       userBots: _userBots,
                       onModelChanged: _handleModelChange,
                       onSendMessage: _handleSendMessage,
