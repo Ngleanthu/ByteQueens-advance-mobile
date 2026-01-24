@@ -4,15 +4,16 @@ import 'package:bytequeens_adm/features/splash/presentation/pages/splash_page.da
 import 'package:bytequeens_adm/features/auth/presentation/pages/sign_in_page.dart';
 import 'package:bytequeens_adm/features/auth/presentation/pages/email_login_page.dart';
 import 'package:bytequeens_adm/features/auth/presentation/pages/sign_up_page.dart';
-import 'package:bytequeens_adm/features/auth/presentation/pages/forgot_password_page.dart';
-import 'package:bytequeens_adm/features/auth/presentation/pages/verification_page.dart';
 import 'package:bytequeens_adm/features/bot/presentation/pages/home_page.dart';
 import 'package:bytequeens_adm/features/bot/presentation/pages/bots_list_page.dart';
 import 'package:bytequeens_adm/features/bot/presentation/pages/create_bot_page.dart';
 import 'package:bytequeens_adm/features/bot/presentation/pages/bot_detail_page.dart';
 import 'package:bytequeens_adm/features/bot/presentation/pages/bot_preview_page.dart';
+import 'package:bytequeens_adm/features/bot/presentation/pages/chat_page.dart';
+import 'package:bytequeens_adm/features/bot/presentation/pages/chat_history_page.dart';
 import 'package:bytequeens_adm/features/group/presentation/pages/groups_list_page.dart';
 import 'package:bytequeens_adm/features/group/presentation/pages/create_group_page.dart';
+import 'package:bytequeens_adm/features/prompt/presentation/pages/prompt_list_page.dart';
 
 class AppRoutes {
   static const String initial = AppConstants.splashRoute;
@@ -22,16 +23,16 @@ class AppRoutes {
     AppConstants.signInRoute: (context) => const SignInPage(),
     AppConstants.emailLoginRoute: (context) => const EmailLoginPage(),
     AppConstants.signUpRoute: (context) => const SignUpPage(),
-    AppConstants.forgotPasswordRoute: (context) => const ForgotPasswordPage(),
-    AppConstants.verificationRoute: (context) => const VerificationPage(),
     AppConstants.homeRoute: (context) => const HomePage(),
     AppConstants.botsListRoute: (context) => const BotsListPage(),
     AppConstants.createBotRoute: (context) => const CreateBotPage(),
     AppConstants.groupsListRoute: (context) => const GroupsListPage(),
     AppConstants.createGroupRoute: (context) => const CreateGroupPage(),
+    AppConstants.promptListRoute: (context) => const PromptListPage(),
   };
 
   static Route<dynamic>? onGenerateRoute(RouteSettings settings) {
+    // Xử lý các route động nếu cần
     switch (settings.name) {
       case AppConstants.splashRoute:
         return MaterialPageRoute(
@@ -53,16 +54,6 @@ class AppRoutes {
           builder: (context) => const SignUpPage(),
           settings: settings,
         );
-      case AppConstants.forgotPasswordRoute:
-        return MaterialPageRoute(
-          builder: (context) => const ForgotPasswordPage(),
-          settings: settings,
-        );
-      case AppConstants.verificationRoute:
-        return MaterialPageRoute(
-          builder: (context) => const VerificationPage(),
-          settings: settings,
-        );
       case AppConstants.homeRoute:
         return MaterialPageRoute(
           builder: (context) => const HomePage(),
@@ -82,9 +73,8 @@ class AppRoutes {
         final botId = settings.arguments as String?;
         if (botId == null) {
           return MaterialPageRoute(
-            builder: (context) => const Scaffold(
-              body: Center(child: Text('Bot ID required')),
-            ),
+            builder: (context) =>
+                const Scaffold(body: Center(child: Text('Bot ID required'))),
           );
         }
         return MaterialPageRoute(
@@ -95,9 +85,8 @@ class AppRoutes {
         final botId = settings.arguments as String?;
         if (botId == null) {
           return MaterialPageRoute(
-            builder: (context) => const Scaffold(
-              body: Center(child: Text('Bot ID required')),
-            ),
+            builder: (context) =>
+                const Scaffold(body: Center(child: Text('Bot ID required'))),
           );
         }
         return MaterialPageRoute(
@@ -109,16 +98,11 @@ class AppRoutes {
     }
   }
 
-  
   static Route<dynamic> onUnknownRoute(RouteSettings settings) {
     return MaterialPageRoute(
       builder: (context) => Scaffold(
-        appBar: AppBar(
-          title: const Text('Page Not Found'),
-        ),
-        body: Center(
-          child: Text('No route defined for ${settings.name}'),
-        ),
+        appBar: AppBar(title: const Text('Page Not Found')),
+        body: Center(child: Text('No route defined for ${settings.name}')),
       ),
     );
   }
