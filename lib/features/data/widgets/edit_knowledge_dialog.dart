@@ -42,13 +42,13 @@ class _EditKnowledgeDialogState extends State<EditKnowledgeDialog> {
 
   void _handleSave() {
     if (_formKey.currentState?.validate() ?? false) {
-      final updatedKnowledge = widget.knowledge.copyWith(
-        name: _nameController.text.trim(),
-        description: _descriptionController.text.trim(),
-        updatedAt: DateTime.now(),
-      );
+      // Return Map instead of KnowledgeBase object
+      final result = {
+        'name': _nameController.text.trim(),
+        'description': _descriptionController.text.trim(),
+      };
 
-      Navigator.pop(context, updatedKnowledge);
+      Navigator.pop(context, result);
     }
   }
 
