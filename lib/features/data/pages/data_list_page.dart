@@ -69,42 +69,38 @@ class _KnowledgeListPageState extends State<KnowledgeListPage> {
         limit: 20,
       );
 
-      if (!mounted) return; // ✅ Check before processing response
+      if (!mounted) return;
 
       if (response.data != null && response.data['data'] != null) {
         final List<dynamic> data = response.data['data'];
+        final knowledgeBases = data.map((item) {
+          return KnowledgeBase(
+            id: item['id']?.toString() ?? '',
+            name: item['knowledgeName']?.toString() ?? '',
+            description: item['description']?.toString() ?? '',
+            unitCount: 0, // Will be updated below
+            sizeInBytes: 0, // Will be updated below
+            createdAt: item['createdAt'] != null
+                ? DateTime.parse(item['createdAt'])
+                : DateTime.now(),
+            updatedAt: item['updatedAt'] != null
+                ? DateTime.parse(item['updatedAt'])
+                : DateTime.now(),
+          );
+        }).toList();
         _safeSetState(() {
-          _knowledgeBases = data.map((item) {
-            return KnowledgeBase(
-              id:
-                  item['id']?.toString() ??
-                  '', // ✅ Changed from 'knowledgeId' to 'id'
-              name: item['knowledgeName']?.toString() ?? '',
-              description: item['description']?.toString() ?? '',
-              unitCount:
-                  item['numUnits'] ??
-                  0, // ✅ Changed from 'unitCount' to 'numUnits'
-              sizeInBytes:
-                  item['totalSize'] ??
-                  0, // ✅ Changed from 'size' to 'totalSize'
-              createdAt: item['createdAt'] != null
-                  ? DateTime.parse(item['createdAt'])
-                  : DateTime.now(),
-              updatedAt: item['updatedAt'] != null
-                  ? DateTime.parse(item['updatedAt'])
-                  : DateTime.now(),
-            );
-          }).toList();
+          _knowledgeBases = knowledgeBases;
           _isLoading = false;
         });
+        await _updateKnowledgeBasesWithDatasources(knowledgeBases);
       } else {
         _safeSetState(() {
           _knowledgeBases = [];
           _isLoading = false;
         });
       }
-    } catch (e) {
-      if (!mounted) return; // ✅ Check before showing error
+    } catch (e, stackTrace) {
+      if (!mounted) return;
 
       _safeSetState(() {
         _errorMessage = e.toString().replaceAll('Exception: ', '');
@@ -112,6 +108,72 @@ class _KnowledgeListPageState extends State<KnowledgeListPage> {
       });
       _showSnackBar('Error loading data: $_errorMessage', isError: true);
     }
+  }
+
+  /// Fetch datasources for all knowledge bases and update counts
+  Future<void> _updateKnowledgeBasesWithDatasources(
+    List<KnowledgeBase> knowledgeBases,
+  ) async {
+    final futures = knowledgeBases.map((kb) async {
+      try {
+        final response = await _knowledgeService.getDatasources(kb.id);
+
+        if (response.statusCode == 200 && response.data != null) {
+          final data = response.data;
+          final datasourcesData = data['data'];
+
+          if (datasourcesData is List) {
+            final datasources = datasourcesData;
+            // Calculate total size
+            int totalSize = 0;
+            for (var ds in datasources) {
+              if (ds is Map) {
+                final size = ds['size'];
+                if (size is int) {
+                  totalSize += size;
+                }
+              }
+            }
+
+            return KnowledgeBase(
+              id: kb.id,
+              name: kb.name,
+              description: kb.description,
+              unitCount: datasources.length,
+              sizeInBytes: totalSize > 0
+                  ? totalSize
+                  : _estimateSize(datasources.length),
+              createdAt: kb.createdAt,
+              updatedAt: kb.updatedAt,
+            );
+          }
+        }
+        return kb;
+      } catch (e) {
+        return kb;
+      }
+    });
+
+    final updatedKBs = await Future.wait(futures);
+
+    if (!mounted) return;
+
+    _safeSetState(() {
+      _knowledgeBases = updatedKBs;
+    });
+  }
+
+  int _estimateSize(int unitCount) {
+    return unitCount * 1500000;
+  }
+
+  String _formatBytes(int bytes) {
+    if (bytes < 1024) return '$bytes B';
+    if (bytes < 1024 * 1024) return '${(bytes / 1024).toStringAsFixed(1)} KB';
+    if (bytes < 1024 * 1024 * 1024) {
+      return '${(bytes / (1024 * 1024)).toStringAsFixed(1)} MB';
+    }
+    return '${(bytes / (1024 * 1024 * 1024)).toStringAsFixed(1)} GB';
   }
 
   List<KnowledgeBase> get filteredKnowledgeBases {
@@ -169,14 +231,17 @@ class _KnowledgeListPageState extends State<KnowledgeListPage> {
           description: result['description']!,
         );
 
-        if (!mounted) return; // ✅ Check after async operation
+        if (!mounted) return;
 
         if (response.statusCode == 200) {
           _showSnackBar('Knowledge base updated successfully');
           await _loadKnowledgeBases();
+        } else {
+          // Handle non-200 responses
+          throw Exception('Update failed with status: ${response.statusCode}');
         }
       } catch (e) {
-        if (!mounted) return; // ✅ Check before showing error
+        if (!mounted) return;
 
         _safeSetState(() => _isLoading = false);
         _showSnackBar(

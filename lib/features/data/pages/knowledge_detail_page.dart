@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/cupertino.dart';
 import '../../data/models/knowledge_base.dart';
 import '../../data/models/knowledge_unit.dart';
+import '../../../services/knowledge_service.dart';
 import '../widgets/knowledge_unit_item.dart';
 import '../widgets/add_knowledge_unit_dialog.dart';
 import '../widgets/import_local_files_dialog.dart';
@@ -9,6 +10,7 @@ import '../widgets/import_website_dialog.dart';
 import '../widgets/import_google_drive_dialog.dart';
 import '../widgets/import_slack_dialog.dart';
 import '../widgets/import_confluence_dialog.dart';
+import 'dart:io';
 
 class KnowledgeDetailPage extends StatefulWidget {
   final KnowledgeBase knowledge;
@@ -21,9 +23,10 @@ class KnowledgeDetailPage extends StatefulWidget {
 
 class _KnowledgeDetailPageState extends State<KnowledgeDetailPage> {
   final TextEditingController _searchController = TextEditingController();
+  final KnowledgeService _knowledgeService = KnowledgeService();
 
-  List<KnowledgeUnit> _allUnits = []; // Store all units
-  List<KnowledgeUnit> _knowledgeUnits = []; // Filtered units
+  List<KnowledgeUnit> _allUnits = [];
+  List<KnowledgeUnit> _knowledgeUnits = [];
   String _searchQuery = '';
   bool _isLoading = false;
   String? _errorMessage;
@@ -54,101 +57,118 @@ class _KnowledgeDetailPageState extends State<KnowledgeDetailPage> {
     }
   }
 
-  /// Load mock knowledge units
   Future<void> _loadKnowledgeUnits() async {
     _safeSetState(() {
       _isLoading = true;
       _errorMessage = null;
     });
 
-    // Simulate API delay
-    await Future.delayed(const Duration(milliseconds: 800));
-
-    if (!mounted) return;
-
     try {
-      // 🎯 MOCK DATA - Replace with API call later
-      final mockUnits = [
-        KnowledgeUnit(
-          id: '1',
-          knowledgeId: widget.knowledge.id,
-          name: 'Product Documentation.pdf',
-          type: 'pdf',
-          status: 'active',
-          sizeInBytes: 2547896, // 2.4 MB
-          createdAt: DateTime.now().subtract(const Duration(days: 5)),
-        ),
-        KnowledgeUnit(
-          id: '2',
-          knowledgeId: widget.knowledge.id,
-          name: 'Company Website Content',
-          type: 'website',
-          status: 'active',
-          sizeInBytes: 1234567, // 1.2 MB
-          createdAt: DateTime.now().subtract(const Duration(days: 3)),
-        ),
-        KnowledgeUnit(
-          id: '3',
-          knowledgeId: widget.knowledge.id,
-          name: 'Team Meeting Notes Q4',
-          type: 'google_drive',
-          status: 'processing',
-          sizeInBytes: 456789, // 446 KB
-          createdAt: DateTime.now().subtract(const Duration(days: 2)),
-        ),
-        KnowledgeUnit(
-          id: '4',
-          knowledgeId: widget.knowledge.id,
-          name: '#general Channel History',
-          type: 'slack',
-          status: 'active',
-          sizeInBytes: 3456789, // 3.3 MB
-          createdAt: DateTime.now().subtract(const Duration(days: 1)),
-        ),
-        KnowledgeUnit(
-          id: '5',
-          knowledgeId: widget.knowledge.id,
-          name: 'Project Wiki & Guidelines',
-          type: 'confluence',
-          status: 'failed',
-          sizeInBytes: 987654, // 964 KB
-          createdAt: DateTime.now().subtract(const Duration(hours: 12)),
-        ),
-        KnowledgeUnit(
-          id: '6',
-          knowledgeId: widget.knowledge.id,
-          name: 'Design System Documentation',
-          type: 'notion',
-          status: 'active',
-          sizeInBytes: 2345678, // 2.2 MB
-          createdAt: DateTime.now().subtract(const Duration(hours: 6)),
-        ),
-        KnowledgeUnit(
-          id: '7',
-          knowledgeId: widget.knowledge.id,
-          name: 'API Reference Guide v2.1.pdf',
-          type: 'document',
-          status: 'active',
-          sizeInBytes: 5678901, // 5.4 MB
-          createdAt: DateTime.now().subtract(const Duration(hours: 3)),
-        ),
-        KnowledgeUnit(
-          id: '8',
-          knowledgeId: widget.knowledge.id,
-          name: 'Tech Blog Articles Collection',
-          type: 'website',
-          status: 'processing',
-          sizeInBytes: 4567890, // 4.4 MB
-          createdAt: DateTime.now().subtract(const Duration(hours: 1)),
-        ),
-      ];
+      print('📥 ========== LOADING DATASOURCES ==========');
+      print('🆔 Knowledge ID: ${widget.knowledge.id}');
 
-      _safeSetState(() {
-        _allUnits = mockUnits;
-        _filterUnits();
-        _isLoading = false;
-      });
-    } catch (e) {
+      final response = await _knowledgeService.getDatasources(
+        widget.knowledge.id,
+        limit: 20,
+      );
+
+      print('📊 Response status: ${response.statusCode}');
+
+      if (!mounted) return;
+
+      if (response.statusCode == 200) {
+        final data = response.data;
+
+        if (data == null || data is! Map) {
+          throw Exception('Invalid response data');
+        }
+
+        final dynamic datasourcesData = data['data'];
+
+        if (datasourcesData == null) {
+          print('⚠️ No datasources found in response');
+          _safeSetState(() {
+            _allUnits = [];
+            _filterUnits();
+            _isLoading = false;
+          });
+          return;
+        }
+
+        if (datasourcesData is! List) {
+          throw Exception('Datasources is not a List');
+        }
+
+        final List<dynamic> datasources = datasourcesData;
+        print('📊 Found ${datasources.length} datasources');
+
+        // ✅ Parse each datasource with correct types
+        final units = datasources
+            .map((ds) {
+              try {
+                if (ds is! Map) {
+                  print('⚠️ Skipping invalid datasource');
+                  return null;
+                }
+
+                final dsMap = Map<String, dynamic>.from(ds);
+
+                // ✅ Parse status - API returns bool, convert to string
+                final statusBool = dsMap['status'];
+                final statusString = statusBool is bool
+                    ? (statusBool ? 'active' : 'inactive')
+                    : 'unknown';
+
+                // ✅ Parse createdAt from metadata.created_at
+                final metadata = dsMap['metadata'];
+                final createdAtStr = metadata is Map
+                    ? metadata['created_at']
+                    : null;
+                final createdAt = createdAtStr is String
+                    ? DateTime.tryParse(createdAtStr) ?? DateTime.now()
+                    : DateTime.now();
+
+                // ✅ Parse syncStatus
+                final syncStatus = dsMap['syncStatus']?.toString() ?? 'unknown';
+
+                final unit = KnowledgeUnit(
+                  id: dsMap['id']?.toString() ?? '',
+                  knowledgeId:
+                      dsMap['knowledgeId']?.toString() ?? widget.knowledge.id,
+                  name: dsMap['name']?.toString() ?? 'Unnamed datasource',
+                  type: dsMap['type']?.toString() ?? 'unknown',
+                  status: statusString, // ✅ Now a string
+                  sizeInBytes: _calculateSize(dsMap),
+                  createdAt: createdAt,
+                );
+
+                print('✅ Parsed: ${unit.name} (${unit.type}) - $statusString');
+                return unit;
+              } catch (e) {
+                print('⚠️ Error parsing datasource: $e');
+                return null;
+              }
+            })
+            .whereType<KnowledgeUnit>()
+            .toList();
+
+        print('✅ Successfully parsed ${units.length} datasources');
+
+        _safeSetState(() {
+          _allUnits = units;
+          _filterUnits();
+          _isLoading = false;
+        });
+
+        print('✅ ========== LOADING COMPLETED ==========\n');
+      } else {
+        throw Exception('Failed to load datasources: ${response.statusCode}');
+      }
+    } catch (e, stackTrace) {
+      print('❌ ========== LOADING FAILED ==========');
+      print('❌ Error: $e');
+      print('❌ =====================================\n');
+
       if (!mounted) return;
 
       _safeSetState(() {
@@ -156,6 +176,46 @@ class _KnowledgeDetailPageState extends State<KnowledgeDetailPage> {
         _isLoading = false;
       });
       _showSnackBar('Error loading units: $_errorMessage', isError: true);
+    }
+  }
+
+  /// Calculate size from datasource data
+  int _calculateSize(Map<String, dynamic> datasource) {
+    try {
+      final sizeValue = datasource['size'];
+      if (sizeValue != null) {
+        if (sizeValue is int) return sizeValue;
+        if (sizeValue is String) {
+          final parsed = int.tryParse(sizeValue);
+          if (parsed != null) return parsed;
+        }
+      }
+      final metadata = datasource['metadata'];
+      if (metadata != null && metadata is Map) {
+        final metaSize = metadata['size'];
+        if (metaSize != null) {
+          if (metaSize is int) return metaSize;
+          if (metaSize is String) {
+            final parsed = int.tryParse(metaSize);
+            if (parsed != null) return parsed;
+          }
+        }
+      }
+      final type = datasource['type']?.toString() ?? 'unknown';
+      switch (type) {
+        case 'web':
+          return 1234567; // ~1.2 MB
+        case 'confluence':
+          return 2345678; // ~2.2 MB
+        case 'google_drive':
+          return 3456789; // ~3.3 MB
+        case 'local_file':
+          return 4567890; // ~4.4 MB
+        default:
+          return 1000000; // 1 MB default
+      }
+    } catch (e) {
+      return 1000000;
     }
   }
 
@@ -190,7 +250,7 @@ class _KnowledgeDetailPageState extends State<KnowledgeDetailPage> {
     final confirm = await showDialog<bool>(
       context: context,
       builder: (ctx) => CupertinoAlertDialog(
-        title: const Text('Delete Knowledge Unit'),
+        title: const Text('Delete Datasource'),
         content: Padding(
           padding: const EdgeInsets.only(top: 8),
           child: Text('Are you sure you want to delete "${unit.name}"?'),
@@ -212,19 +272,29 @@ class _KnowledgeDetailPageState extends State<KnowledgeDetailPage> {
     if (confirm == true && mounted) {
       _safeSetState(() => _isLoading = true);
 
-      // Simulate API delay
-      await Future.delayed(const Duration(milliseconds: 500));
+      try {
+        // Call API to delete datasource
+        await _knowledgeService.deleteDatasource(widget.knowledge.id, unit.id);
 
-      if (!mounted) return;
+        if (!mounted) return;
 
-      // 🎯 MOCK: Remove from list
-      _safeSetState(() {
-        _allUnits.removeWhere((u) => u.id == unit.id);
-        _filterUnits();
-        _isLoading = false;
-      });
+        // Remove from local list
+        _safeSetState(() {
+          _allUnits.removeWhere((u) => u.id == unit.id);
+          _filterUnits();
+          _isLoading = false;
+        });
 
-      _showSnackBar('Knowledge unit deleted successfully');
+        _showSnackBar('Datasource deleted successfully');
+      } catch (e) {
+        if (!mounted) return;
+
+        _safeSetState(() => _isLoading = false);
+        _showSnackBar(
+          'Failed to delete: ${e.toString().replaceAll('Exception: ', '')}',
+          isError: true,
+        );
+      }
     }
   }
 
@@ -272,10 +342,325 @@ class _KnowledgeDetailPageState extends State<KnowledgeDetailPage> {
         return;
     }
 
+    // ✅ Accept dynamic result from dialog
     final result = await showDialog(context: context, builder: (_) => dialog);
 
-    if (result != null) {
-      // Handle import result
+    print('🔍 Dialog result type: ${result.runtimeType}');
+    print('🔍 Dialog result value: $result');
+
+    if (result != null && mounted) {
+      // ✅ Handle the result with proper type conversion
+      await _handleImportResult(source, result);
+    }
+  }
+
+  /// ✅ Handle import result with proper type conversion
+  Future<void> _handleImportResult(String source, dynamic result) async {
+    // ✅ Convert result to Map<String, dynamic> safely
+    Map<String, dynamic> resultMap;
+
+    try {
+      if (result is Map<String, dynamic>) {
+        resultMap = result;
+      } else if (result is Map) {
+        // Convert Map<dynamic, dynamic> to Map<String, dynamic>
+        resultMap = Map<String, dynamic>.from(result);
+      } else {
+        throw Exception(
+          'Invalid result type: ${result.runtimeType}. Expected Map.',
+        );
+      }
+    } catch (e) {
+      print('❌ Type conversion error: $e');
+      _showSnackBar('Invalid data format from dialog', isError: true);
+      return;
+    }
+
+    // Validate resultMap is not empty
+    if (resultMap.isEmpty) {
+      print('⚠️ Warning: Result map is empty');
+      _showSnackBar('No data received from dialog', isError: true);
+      return;
+    }
+
+    // Show loading dialog
+    if (!mounted) return;
+    showCupertinoDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) {
+        return CupertinoPopupSurface(
+          isSurfacePainted: true,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 28),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const CupertinoActivityIndicator(radius: 14),
+                const SizedBox(height: 18),
+                Text(
+                  'Importing ${_getSourceDisplayName(source)}',
+                  style: const TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600,
+                    letterSpacing: -0.2,
+                    color: CupertinoColors.label,
+                  ),
+                ),
+                const SizedBox(height: 6),
+                const Text(
+                  'Please wait a moment…',
+                  style: TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w400,
+                    color: CupertinoColors.secondaryLabel,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+
+    try {
+      switch (source) {
+        case 'website':
+          await _handleWebsiteImport(resultMap);
+          break;
+        case 'local_files':
+          await _handleLocalFilesImport(resultMap);
+          break;
+        case 'google_drive':
+          await _handleGoogleDriveImport(resultMap);
+          break;
+        case 'confluence':
+          await _handleConfluenceImport(resultMap);
+          break;
+        case 'slack':
+          await _handleSlackImport(resultMap);
+          break;
+        default:
+          throw Exception('Unknown source type: $source');
+      }
+
+      // Close loading dialog
+      if (!mounted) return;
+      Navigator.pop(context);
+
+      // Show success message
+      final name = resultMap['name']?.toString() ?? 'datasource';
+      _showSnackBar('Successfully imported: $name');
+
+      // Reload datasources
+      await _loadKnowledgeUnits();
+    } catch (e, stackTrace) {
+      // Close loading dialog
+      if (!mounted) return;
+      Navigator.pop(context);
+
+      // Show error message
+      final errorMsg = e.toString().replaceAll('Exception: ', '');
+      _showSnackBar('Import failed: $errorMsg', isError: true);
+    }
+  }
+
+  /// Get display name for source type
+  String _getSourceDisplayName(String source) {
+    switch (source) {
+      case 'website':
+        return 'website';
+      case 'local_files':
+        return 'files';
+      case 'google_drive':
+        return 'Google Drive';
+      case 'slack':
+        return 'Slack';
+      case 'confluence':
+        return 'Confluence';
+      default:
+        return 'datasource';
+    }
+  }
+
+  Future<void> _handleWebsiteImport(Map<String, dynamic> result) async {
+    final name = result['name']?.toString()?.trim();
+    final url = result['url']?.toString()?.trim();
+
+    if (name == null || name.isEmpty) {
+      throw Exception('Name is required');
+    }
+    if (url == null || url.isEmpty) {
+      throw Exception('URL is required');
+    }
+
+    // Convert interval to API format
+    final intervalMap = {
+      '30 min': '30m',
+      '1 hour': '1h',
+      '6 hours': '6h',
+      '12 hours': '12h',
+      '1 day': '24h',
+      '3 days': '72h',
+      '1 week': '168h',
+    };
+    final crawlType = result['crawlType']?.toString() ?? 'single_page';
+    final autoUpdate = result['autoUpdate'];
+    final autoSync = autoUpdate is bool ? autoUpdate : true;
+    final intervalKey = result['interval']?.toString() ?? '12 hours';
+    final interval = intervalMap[intervalKey] ?? '12h';
+    final response = await _knowledgeService.addWebDatasource(
+      widget.knowledge.id,
+      name: name,
+      url: url,
+      crawlType: crawlType,
+      autoSync: autoSync,
+      syncInterval: interval,
+      pageLimit: 64,
+    );
+  }
+
+  /// Handle local files import (placeholder)
+  Future<void> _handleLocalFilesImport(Map<String, dynamic> result) async {
+    final name = result['name']?.toString()?.trim();
+    if (name == null || name.isEmpty) {
+      throw Exception('Datasource name is required');
+    }
+
+    final files = result['files'];
+    if (files == null || files is! List || files.isEmpty) {
+      throw Exception('No files selected');
+    }
+
+    final List<File> fileList = files.cast<File>();
+    final uploadResponse = await _knowledgeService.uploadFiles(files: fileList);
+
+    if (uploadResponse.statusCode != 200 && uploadResponse.statusCode != 201) {
+      throw Exception('Failed to upload files: ${uploadResponse.statusCode}');
+    }
+
+    // Parse upload response
+    final uploadData = uploadResponse.data;
+    if (uploadData == null || uploadData['files'] == null) {
+      throw Exception('Invalid upload response');
+    }
+
+    final List<dynamic> uploadedFiles = uploadData['files'];
+    // Extract file IDs and types
+    final List<String> fileIds = [];
+    final Map<String, String> fileTypes = {};
+
+    for (var uploadedFile in uploadedFiles) {
+      if (uploadedFile is Map) {
+        final fileId = uploadedFile['id']?.toString();
+        final extension = uploadedFile['extension']?.toString() ?? 'pdf';
+
+        if (fileId != null) {
+          fileIds.add(fileId);
+          fileTypes[fileId] = extension;
+        }
+      }
+    }
+
+    if (fileIds.isEmpty) {
+      throw Exception('No file IDs received from upload');
+    }
+    final response = await _knowledgeService.addLocalFilesDatasource(
+      widget.knowledge.id,
+      name: name,
+      fileIds: fileIds,
+    );
+    if (response.data != null) {
+      print('Local files datasource created successfully');
+    }
+  }
+
+  String _formatBytes(int bytes) {
+    if (bytes < 1024) return '$bytes B';
+    if (bytes < 1024 * 1024) return '${(bytes / 1024).toStringAsFixed(1)} KB';
+    if (bytes < 1024 * 1024 * 1024) {
+      return '${(bytes / (1024 * 1024)).toStringAsFixed(1)} MB';
+    }
+    return '${(bytes / (1024 * 1024 * 1024)).toStringAsFixed(1)} GB';
+  }
+
+  Future<void> _handleGoogleDriveImport(Map<String, dynamic> result) async {
+    throw UnimplementedError('Google Drive import not implemented yet');
+  }
+
+  /// Handle Confluence import (placeholder)
+  Future<void> _handleConfluenceImport(Map<String, dynamic> result) async {
+    try {
+      final name = result['name']?.toString().trim();
+      final url = result['url']?.toString().trim();
+      final username = result['username']?.toString().trim();
+      final token = result['token']?.toString().trim();
+      final autoSync = result['autoSync'] == true;
+      final pageLimit = result['pageLimit'] is int ? result['pageLimit'] : 128;
+      if (name == null || name.isEmpty) {
+        throw Exception('Datasource name is required');
+      }
+
+      if (url == null || url.isEmpty) {
+        throw Exception('Confluence URL is required');
+      }
+
+      if (!url.contains('atlassian.net/wiki')) {
+        throw Exception('Invalid Confluence wiki URL');
+      }
+
+      if (username == null || username.isEmpty) {
+        throw Exception('Confluence username (email) is required');
+      }
+
+      if (token == null || token.isEmpty) {
+        throw Exception('Confluence API token is required');
+      }
+      final response = await _knowledgeService.addDatasources(
+        widget.knowledge.id,
+        datasources: [
+          {
+            'name': name,
+            'type': 'confluence',
+            'credentials': {'url': url, 'username': username, 'token': token},
+            'options': {'sync': autoSync, 'pageLimit': pageLimit},
+          },
+        ],
+      );
+    } catch (e) {
+      rethrow;
+    }
+  }
+
+  Future<void> _handleSlackImport(Map<String, dynamic> result) async {
+    try {
+      final name = result['name']?.toString().trim();
+      final token = result['token']?.toString().trim();
+      final autoUpdate = result['autoUpdate'] == true;
+
+      if (name == null || name.isEmpty) {
+        throw Exception('Datasource name is required');
+      }
+
+      if (token == null || token.isEmpty) {
+        throw Exception('Slack bot token is required');
+      }
+
+      if (!token.startsWith('xoxb-')) {
+        throw Exception('Invalid Slack bot token (must start with xoxb-)');
+      }
+      final response = await _knowledgeService.addDatasources(
+        widget.knowledge.id,
+        datasources: [
+          {
+            'name': name,
+            'type': 'slack',
+            'credentials': {'token': token, 'autoUpdate': autoUpdate},
+          },
+        ],
+      );
+    } catch (e) {
+      rethrow;
     }
   }
 
@@ -534,8 +919,8 @@ class _KnowledgeDetailPageState extends State<KnowledgeDetailPage> {
           const SizedBox(height: 24),
           Text(
             _searchQuery.isNotEmpty
-                ? 'No knowledge units found'
-                : 'No knowledge units found',
+                ? 'No datasources found'
+                : 'No datasources yet',
             style: const TextStyle(
               fontSize: 20,
               fontWeight: FontWeight.w600,
@@ -549,12 +934,8 @@ class _KnowledgeDetailPageState extends State<KnowledgeDetailPage> {
             child: Text(
               _searchQuery.isNotEmpty
                   ? 'Try adjusting your search'
-                  : 'Click here to add new knowledge',
-              style: TextStyle(
-                fontSize: 15,
-                color: primaryBlue,
-                fontWeight: FontWeight.w500,
-              ),
+                  : 'Add your first datasource to get started',
+              style: TextStyle(fontSize: 15, color: textGray.withOpacity(0.8)),
               textAlign: TextAlign.center,
             ),
           ),
